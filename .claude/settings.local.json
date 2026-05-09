@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install *)",
+      "Bash(python *)",
+      "Bash(python3 *)",
+      "Bash(BOT_TOKEN=\"\" python3 *)",
+      "Bash(kill %1)",
+      "Bash(wait)",
+      "Bash(sqlite3 /Users/sergeimirakov/Desktop/UsernameMarket/market.db \"SELECT COUNT\\(*\\) FROM usernames;\")",
+      "Bash(railway --version)",
+      "Bash(curl -fsSL https://railway.com/install.sh)",
+      "Bash(sh)",
+      "Bash(export PATH=\"$HOME/.railway/bin:$PATH\")",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
+    ]
+  }
+}

@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>НИКЕР</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0a0f; --s1:#111118; --s2:#1a1a24; --s3:#22222e;
+    --b1:rgba(255,255,255,0.07); --b2:rgba(255,255,255,0.13);
+    --acc:#7c6af7; --acc2:#a78bfa; --glow:rgba(124,106,247,0.2);
+    --gold:#f5c842; --text:#f0efff; --t2:#9998b8; --t3:#5a5a7a;
+    --green:#4ade80; --teal:#38d9d9; --red:#f87171;
+    --r:14px; --r2:20px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+  /* HEADER */
+  .hdr{position:sticky;top:0;z-index:100;background:rgba(10,10,15,0.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--b1);padding:12px 16px 10px}
+  .hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .logo{display:flex;align-items:center;gap:8px}
+  .logo-ic{width:32px;height:32px;background:linear-gradient(135deg,var(--acc),var(--teal));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+  .logo-tx{font-size:18px;font-weight:800;letter-spacing:1px;background:linear-gradient(90deg,var(--text),var(--acc2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+  .logo-sb{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;-webkit-text-fill-color:var(--t3)}
+  .hdr-acts{display:flex;gap:6px}
+  .bic{width:34px;height:34px;background:var(--s2);border:1px solid var(--b1);border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;transition:all .15s;color:var(--t2)}
+  .bic:active{transform:scale(.92);background:var(--s3)}
+  .bic.on{background:var(--glow);border-color:var(--acc);color:var(--acc2)}
+  .srch{position:relative}
+  .si{width:100%;height:38px;background:var(--s2);border:1px solid var(--b1);border-radius:11px;padding:0 36px 0 36px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);outline:none;transition:border-color .2s}
+  .si::placeholder{color:var(--t3);font-family:'Space Grotesk',sans-serif}
+  .si:focus{border-color:var(--acc)}
+  .si-ic{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--t3);pointer-events:none}
+  .si-cl{position:absolute;right:11px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--t3);cursor:pointer;display:none}
+
+  /* TABS */
+  .tabs{display:flex;gap:5px;padding:10px 16px 0;overflow-x:auto;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex-shrink:0;padding:6px 13px;border-radius:18px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--b1);background:var(--s1);color:var(--t2);transition:all .15s}
+  .tab:active{transform:scale(.95)}
+  .tab.on{background:var(--acc);border-color:var(--acc);color:#fff}
+
+  /* FILTER */
+  .fp{display:none;flex-direction:column;gap:10px;padding:12px 16px;background:var(--s1);border-bottom:1px solid var(--b1)}
+  .fp.open{display:flex}
+  .fl{font-size:11px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;min-width:58px}
+  .fr{display:flex;gap:8px;align-items:center}
+  .chips{display:flex;gap:5px;flex-wrap:wrap}
+  .chip{padding:4px 9px;border-radius:7px;font-size:11px;font-weight:500;border:1px solid var(--b1);background:var(--s2);color:var(--t2);cursor:pointer;transition:all .12s}
+  .chip:active{transform:scale(.93)}
+  .chip.on{background:var(--glow);border-color:var(--acc);color:var(--acc2)}
+  .rng{flex:1;-webkit-appearance:none;height:3px;background:var(--s3);border-radius:2px;outline:none}
+  .rng::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:var(--acc);border-radius:50%;cursor:pointer}
+  .rv{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--acc2);min-width:58px;text-align:right}
+
+  /* SORT BAR */
+  .sb{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid var(--b1)}
+  .sc{font-size:11px;color:var(--t3)}.sc span{color:var(--acc2);font-weight:600}
+  .ss{background:var(--s2);border:1px solid var(--b1);border-radius:7px;color:var(--t2);font-size:11px;font-family:'Space Grotesk',sans-serif;padding:4px 7px;outline:none;cursor:pointer}
+
+  /* STATS */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--b1);border-bottom:1px solid var(--b1)}
+  .stc{background:var(--s1);padding:10px;text-align:center}
+  .stn{font-size:16px;font-weight:700;color:var(--text);font-family:'JetBrains Mono',monospace;line-height:1;margin-bottom:2px}
+  .stl{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px}
+
+  /* GRID */
+  .grid{padding:10px 10px 100px;display:grid;grid-template-columns:1fr 1fr;gap:9px}
+
+  /* CARD */
+  .card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r2);overflow:hidden;cursor:pointer;transition:transform .15s,border-color .15s;position:relative;animation:fu .25s ease both}
+  @keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  .card:active{transform:scale(.97)}
+  .card:hover{border-color:var(--b2)}
+  .card.hot{border-color:rgba(245,200,66,.3)}
+  .card.hot::after{content:'🔥';position:absolute;top:7px;right:7px;font-size:13px}
+  .card.reserved{border-color:rgba(248,113,113,.3)}
+  .ct{padding:12px 12px 9px;position:relative}
+  .ccat{font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:var(--t3);margin-bottom:6px;font-weight:500}
+
+  /* BLURRED USERNAME */
+  .cname-blur{display:flex;align-items:center;gap:1px;margin-bottom:9px;height:22px;overflow:hidden}
+  .bat{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:var(--acc2);flex-shrink:0}
+  .bltx{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:var(--text);filter:blur(5px);user-select:none;white-space:nowrap}
+
+  /* PROPS */
+  .props{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+  .pr{display:flex;align-items:center;gap:5px}
+  .pic{font-size:11px;flex-shrink:0;width:14px;text-align:center}
+  .pval{font-size:10px;color:var(--t2);font-family:'JetBrains Mono',monospace}
+
+  /* BADGE ROW */
+  .cmeta{display:flex;gap:4px;flex-wrap:wrap}
+  .badge{padding:2px 6px;border-radius:5px;font-size:9px;font-weight:600;font-family:'JetBrains Mono',monospace}
+  .bl{background:rgba(56,217,217,.1);color:var(--teal)}
+  .ba{background:rgba(124,106,247,.1);color:var(--acc2)}
+  .br2{background:rgba(248,113,113,.1);color:var(--red)}
+
+  /* CARD BOTTOM */
+  .cb{padding:9px 12px 12px;border-top:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between;background:var(--s2)}
+  .cp{display:flex;align-items:baseline;gap:2px}
+  .pn{font-size:17px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--gold);line-height:1}
+  .ps{font-size:13px}
+  .bbuy{padding:6px 12px;background:var(--acc);border:none;border-radius:9px;color:#fff;font-size:11px;font-weight:600;font-family:'Space Grotesk',sans-serif;cursor:pointer;transition:all .15s}
+  .bbuy:active{transform:scale(.93);background:#6a5ce8}
+  .bwatch{padding:6px 10px;background:transparent;border:1px solid var(--b2);border-radius:9px;color:var(--t2);font-size:11px;font-weight:500;font-family:'Space Grotesk',sans-serif;cursor:pointer;transition:all .15s}
+  .bwatch:active{transform:scale(.93)}
+
+  /* MODAL */
+  .mo{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(10px);z-index:200;display:none;align-items:flex-end;justify-content:center}
+  .mo.open{display:flex}
+  .modal{width:100%;max-width:480px;background:var(--s1);border-radius:22px 22px 0 0;border:1px solid var(--b2);border-bottom:none;padding:18px 18px 28px;animation:su .3s cubic-bezier(.34,1.56,.64,1)}
+  @keyframes su{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .mh{width:32px;height:3px;background:var(--b2);border-radius:2px;margin:0 auto 18px}
+  .mun{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;margin-bottom:3px}
+  .mun::before{content:'@';color:var(--acc2)}
+  .mcat{font-size:12px;color:var(--t3);margin-bottom:16px}
+  .mscores{display:flex;gap:7px;margin-bottom:16px}
+  .msc{flex:1;background:var(--s2);border:1px solid var(--b1);border-radius:var(--r);padding:10px;text-align:center}
+  .mscv{font-size:22px;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1;margin-bottom:3px}
+  .mscl{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px}
+  .mpb{background:linear-gradient(135deg,rgba(124,106,247,.1),rgba(56,217,217,.06));border:1px solid rgba(124,106,247,.2);border-radius:var(--r2);padding:14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .mpl{font-size:11px;color:var(--t3);margin-bottom:3px}
+  .mpn{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--gold);line-height:1}
+  .res-warn{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:var(--r);padding:10px 14px;font-size:12px;color:var(--red);margin-bottom:10px;text-align:center;display:none}
+  .cn{font-size:10px;color:var(--t3);margin-bottom:14px;text-align:center}
+  .bbf{width:100%;padding:14px;background:linear-gradient(135deg,var(--acc),#9b85ff);border:none;border-radius:var(--r2);color:#fff;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.2px}
+  .bbf:active{transform:scale(.97);opacity:.9}
+  .bbf:disabled{opacity:.5;cursor:not-allowed}
+  .bwf{width:100%;padding:12px;background:transparent;border:1px solid var(--b1);border-radius:var(--r2);color:var(--t2);font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:500;cursor:pointer;margin-top:7px;transition:all .15s}
+  .bwf:active{transform:scale(.97)}
+  .bcc{width:100%;padding:12px;background:transparent;border:1px solid var(--b1);border-radius:var(--r2);color:var(--t3);font-family:'Space Grotesk',sans-serif;font-size:13px;cursor:pointer;margin-top:6px;transition:all .15s}
+  .bcc:active{transform:scale(.97)}
+
+  /* NAV */
+  .nav{position:fixed;bottom:0;left:0;right:0;background:rgba(10,10,15,.93);backdrop-filter:blur(20px);border-top:1px solid var(--b1);display:flex;padding-bottom:env(safe-area-inset-bottom,0);z-index:100}
+  .ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 0 11px;cursor:pointer;transition:all .15s;color:var(--t3);font-size:9px;font-weight:500;letter-spacing:.3px;text-transform:uppercase}
+  .ni:active{transform:scale(.88)}
+  .ni.on{color:var(--acc2)}
+  .nic{font-size:20px;line-height:1}
+
+  /* SCREEN */
+  .sc-wrap{display:none}
+  .sc-wrap.on{display:block}
+  .pg{padding:18px 16px 100px}
+  .ptit{font-size:20px;font-weight:700;margin-bottom:5px}
+  .psub{font-size:13px;color:var(--t3);margin-bottom:20px;line-height:1.5}
+
+  /* WATCHLIST */
+  .wi{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r2);padding:14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .win{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600}
+  .win::before{content:'@';color:var(--acc2)}
+  .wis{font-size:11px;color:var(--t3);margin-top:2px}
+  .wia{font-size:20px;cursor:pointer;opacity:.6;transition:opacity .15s}
+  .wia:active{opacity:1}
+  .watch-inp{display:flex;gap:8px;margin-bottom:20px}
+  .wi-in{flex:1;height:42px;background:var(--s2);border:1px solid var(--b1);border-radius:12px;padding:0 14px 0 28px;font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--text);outline:none;transition:border-color .2s}
+  .wi-in:focus{border-color:var(--acc)}
+  .wi-in::placeholder{color:var(--t3);font-size:12px;font-family:'Space Grotesk',sans-serif}
+  .wi-wrap{position:relative;flex:1}
+  .wi-at{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--acc2);font-weight:600;pointer-events:none}
+  .bwadd{padding:0 16px;height:42px;background:var(--acc);border:none;border-radius:12px;color:#fff;font-size:13px;font-weight:600;font-family:'Space Grotesk',sans-serif;cursor:pointer;white-space:nowrap;flex-shrink:0}
+  .bwadd:active{transform:scale(.95)}
+
+  /* EMPTY / LOADING */
+  .empty{grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--t3)}
+  .ei{font-size:44px;margin-bottom:10px}
+  .et{font-size:15px;color:var(--t2);font-weight:500;margin-bottom:5px}
+  .es{font-size:12px;line-height:1.5}
+  .spin{grid-column:1/-1;display:flex;justify-content:center;padding:40px}
+  .sp{width:28px;height:28px;border:2px solid var(--s3);border-top-color:var(--acc);border-radius:50%;animation:sp .7s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .toast{position:fixed;bottom:85px;left:50%;transform:translateX(-50%) translateY(16px);background:var(--s2);border:1px solid var(--b2);border-radius:20px;padding:9px 18px;font-size:12px;font-weight:500;color:var(--text);z-index:999;opacity:0;transition:all .25s;white-space:nowrap;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* MINING BANNER */
+  .mine-banner{margin:10px 10px 0;padding:12px 14px;background:linear-gradient(135deg,rgba(124,106,247,.12),rgba(56,217,217,.06));border:1px solid rgba(124,106,247,.25);border-radius:var(--r2);display:flex;align-items:center;gap:10px}
+  .mine-ic{font-size:20px;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  .mine-tx{font-size:11px;color:var(--t2);line-height:1.4}
+  .mine-tx b{color:var(--acc2)}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-top">
+    <div class="logo">
+      <div class="logo-ic">⛏️</div>
+      <div>
+        <div class="logo-tx">НИКЕР</div>
+        <div class="logo-sb">Маркет Telegram-ников</div>
+      </div>
+    </div>
+    <div class="hdr-acts">
+      <div class="bic" id="btnFilter" onclick="toggleFilter()">⚙️</div>
+    </div>
+  </div>
+  <div class="srch" id="srchWrap">
+    <span class="si-ic">🔍</span>
+    <input class="si" id="si" placeholder="Найти ник..." oninput="onSearch(this.value)">
+    <span class="si-cl" id="siCl" onclick="clearSearch()">✕</span>
+  </div>
+</div>
+
+<div class="tabs" id="tabs">
+  <div class="tab on" onclick="setCat('Все',this)">Все</div>
+  <div class="tab" onclick="setCat('Премиум',this)">⚡ Премиум</div>
+  <div class="tab" onclick="setCat('Статус',this)">👑 Статус</div>
+  <div class="tab" onclick="setCat('Технологии',this)">💻 Техно</div>
+  <div class="tab" onclick="setCat('Природа',this)">🌿 Природа</div>
+  <div class="tab" onclick="setCat('Финансы',this)">💰 Финансы</div>
+  <div class="tab" onclick="setCat('Космос',this)">🌌 Космос</div>
+  <div class="tab" onclick="setCat('Стиль',this)">🎨 Стиль</div>
+  <div class="tab" onclick="setCat('Имена',this)">👤 Имена</div>
+</div>
+
+<div class="fp" id="fp">
+  <div class="fr"><span class="fl">Сортировка</span>
+    <div class="chips">
+      <div class="chip on" onclick="setSort('price_desc',this)">↓ Цена</div>
+      <div class="chip" onclick="setSort('price_asc',this)">↑ Цена</div>
+      <div class="chip" onclick="setSort('length',this)">Длина</div>
+      <div class="chip" onclick="setSort('newest',this)">Новые</div>
+    </div>
+  </div>
+  <div class="fr"><span class="fl">Макс. цена</span>
+    <div style="flex:1;display:flex;align-items:center;gap:8px">
+      <input type="range" class="rng" id="prng" min="100" max="10000" step="100" value="10000" oninput="onPrice(this.value)">
+      <span class="rv" id="prv">10 000 ⭐</span>
+    </div>
+  </div>
+  <div class="fr"><span class="fl">Длина</span>
+    <div class="chips">
+      <div class="chip on" onclick="setLen(99,this)">Любая</div>
+      <div class="chip" onclick="setLen(4,this)">≤4</div>
+      <div class="chip" onclick="setLen(6,this)">≤6</div>
+      <div class="chip" onclick="setLen(8,this)">≤8</div>
+    </div>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stc"><div class="stn" id="stN">—</div><div class="stl">В продаже</div></div>
+  <div class="stc"><div class="stn" id="stMin">—</div><div class="stl">От ⭐</div></div>
+  <div class="stc"><div class="stn" id="stMax">—</div><div class="stl">До ⭐</div></div>
+</div>
+
+<div class="sb">
+  <span class="sc">Найдено: <span id="fc">0</span></span>
+  <select class="ss" onchange="setSort(this.value)">
+    <option value="price_desc">↓ По цене</option>
+    <option value="price_asc">↑ По цене</option>
+    <option value="length">По длине</option>
+    <option value="newest">Сначала новые</option>
+  </select>
+</div>
+
+<!-- SCREENS -->
+<div id="scCatalog" class="sc-wrap on">
+  <div class="grid" id="grid"><div class="spin"><div class="sp"></div></div></div>
+</div>
+
+<div id="scWatch" class="sc-wrap">
+  <div class="pg">
+    <div class="ptit">⭐ Вотчлист</div>
+    <div class="psub">Подпишитесь на ник — бот пришлёт уведомление как только он появится в продаже.</div>
+    <div class="watch-inp">
+      <div class="wi-wrap">
+        <span class="wi-at">@</span>
+        <input class="wi-in" id="wiIn" placeholder="username" maxlength="32"
+               oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase()">
+      </div>
+      <button class="bwadd" onclick="addWatch()">+ Следить</button>
+    </div>
+    <div id="wList"></div>
+  </div>
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="ni on" id="navC" onclick="showScreen('catalog')">
+    <span class="nic">🏪</span><span>Каталог</span>
+  </div>
+  <div class="ni" id="navW" onclick="showScreen('watch')">
+    <span class="nic">⭐</span><span>Вотчлист</span>
+  </div>
+  <div class="ni" id="navP" onclick="showToast('Профиль скоро!')">
+    <span class="nic">👤</span><span>Профиль</span>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="mo" id="mo" onclick="closeMo(event)">
+  <div class="modal"><div class="mh"></div><div id="mc"></div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+if(tg){tg.expand();tg.setBackgroundColor('#0a0a0f');tg.setHeaderColor('#0a0a0f')}
+
+const API = '/api';
+const USER_ID = tg?.initDataUnsafe?.user?.id || 0;
+
+let all=[], flt={cat:'Все',sort:'price_desc',maxPrice:10000,maxLen:99,search:''};
+
+// ── Init ──────────────────────────────────
+document.addEventListener('DOMContentLoaded', ()=>{ load(); });
+
+async function load(){
+  try{
+    const r = await fetch(`${API}/catalog`);
+    if(r.ok){
+      const data = await r.json();
+      all = data.items || [];
+    }
+  }catch(e){ all=[]; }
+  render();
+}
+
+// ── Render ────────────────────────────────
+function render(){
+  let items=[...all];
+  if(flt.cat!=='Все') items=items.filter(i=>i.category===flt.cat);
+  if(flt.maxPrice<10000) items=items.filter(i=>i.price<=flt.maxPrice);
+  if(flt.maxLen<99) items=items.filter(i=>i.length<=flt.maxLen);
+  if(flt.search) items=items.filter(i=>i.username.includes(flt.search));
+
+  const ord={
+    'price_desc':(a,b)=>b.price-a.price,
+    'price_asc':(a,b)=>a.price-b.price,
+    'length':(a,b)=>a.length-b.length,
+    'newest':(a,b)=>0
+  };
+  items.sort(ord[flt.sort]||ord.price_desc);
+
+  document.getElementById('fc').textContent=items.length;
+  document.getElementById('stN').textContent=all.length;
+  if(all.length){
+    const prices=all.map(i=>i.price);
+    document.getElementById('stMin').textContent=fmt(Math.min(...prices));
+    document.getElementById('stMax').textContent=fmt(Math.max(...prices));
+  }
+
+  const g=document.getElementById('grid');
+  if(!items.length){
+    g.innerHTML=`
+      <div class="empty">
+        <div class="ei">⛏️</div>
+        <div class="et">Идёт майнинг ников</div>
+        <div class="es">Бот сканирует доступные ники.<br>Загляните через пару минут!</div>
+      </div>`;
+    return;
+  }
+  g.innerHTML=items.map((it,i)=>card(it,i)).join('');
+}
+
+// ── Card ──────────────────────────────────
+function card(it,i){
+  const hot = it.price>=7000;
+  const res = it.is_reserved && it.reserved_by!==USER_ID;
+  const digits = it.has_digits ? '🔢 Есть цифры' : '🔤 Буквы';
+  const repeats = it.repeat_count > 0
+    ? `🔁 Повт: ${it.repeat_count}`
+    : '✨ Уникальные';
+
+  return `<div class="card${hot?' hot':''}${res?' reserved':''}"
+    onclick='openMo(${JSON.stringify(it)})' style="animation-delay:${i*25}ms">
+    <div class="ct">
+      <div class="ccat">${it.category}</div>
+      <div class="cname-blur">
+        <span class="bat">@</span><span class="bltx">${it.username}</span>
+      </div>
+      <div class="props">
+        <div class="pr"><span class="pic">📏</span><span class="pval">${it.length} симв.</span></div>
+        <div class="pr"><span class="pic">${it.has_digits?'🔢':'🔤'}</span><span class="pval">${it.has_digits?'Есть цифры':'Буквы'}</span></div>
+        <div class="pr"><span class="pic">🔁</span><span class="pval">Повторяющихся: ${it.repeat_count}</span></div>
+      </div>
+      <div class="cmeta">
+        <span class="badge bl">${it.length} симв.</span>
+        <span class="badge ba">${it.category}</span>
+        ${res?`<span class="badge br2">Занят</span>`:''}
+      </div>
+    </div>
+    <div class="cb">
+      <div class="cp"><span class="pn">${fmt(it.price)}</span><span class="ps">⭐</span></div>
+      ${res
+        ? `<button class="bwatch" onclick="event.stopPropagation();watchFromCard('${it.username}')">🔔</button>`
+        : `<button class="bbuy" onclick="event.stopPropagation();openMo(${JSON.stringify(it).replace(/'/g,"&#39;")})">Купить</button>`
+      }
+    </div>
+  </div>`;
+}
+
+// ── Modal ─────────────────────────────────
+let cur=null;
+function openMo(it){
+  cur=it;
+  const res = it.is_reserved && it.reserved_by!==USER_ID;
+  document.getElementById('mc').innerHTML=`
+    <div class="mun">${it.username}</div>
+    <div class="mcat">${it.category} · ${it.length} символов · ${it.has_digits?'Есть цифры':'Только буквы'} · повторяющихся: ${it.repeat_count}</div>
+    <div class="mscores">
+      <div class="msc"><div class="mscv" style="color:var(--green)">${it.length}</div><div class="mscl">Длина</div></div>
+      <div class="msc"><div class="mscv" style="color:var(--acc2)">${it.has_digits?'✓':'—'}</div><div class="mscl">Цифры</div></div>
+      <div class="msc"><div class="mscv" style="color:var(--teal)">${it.repeat_count}</div><div class="mscl">Повторы</div></div>
+    </div>
+    <div class="mpb">
+      <div><div class="mpl">Цена</div><div class="mpn">${fmt(it.price)}</div></div>
+      <span style="font-size:20px">⭐</span>
+    </div>
+    ${res?`<div class="res-warn" style="display:block">⏳ Ник зарезервирован — доступен через ~${getResTime(it)} мин</div>`:''}
+    <div class="cn">✓ Комиссия Telegram 30% уже включена</div>
+    ${res
+      ? `<button class="bwf" onclick="watchAndClose()">🔔 Уведомить когда освободится</button>`
+      : `<button class="bbf" onclick="doBuy()">✦ Купить за ${fmt(it.price)} ⭐</button>
+         <button class="bwf" onclick="watchAndClose()">🔔 В вотчлист</button>`
+    }
+    <button class="bcc" onclick="closeMoDirect()">Закрыть</button>
+  `;
+  document.getElementById('mo').classList.add('open');
+  tg?.HapticFeedback?.impactOccurred('medium');
+}
+
+function getResTime(it){
+  if(!it.reserved_until) return '?';
+  const diff=(new Date(it.reserved_until)-new Date())/60000;
+  return Math.max(1,Math.ceil(diff));
+}
+function closeMo(e){ if(e.target===document.getElementById('mo')) closeMoDirect(); }
+function closeMoDirect(){ document.getElementById('mo').classList.remove('open'); }
+
+async function doBuy(){
+  if(!cur) return;
+  try{
+    const r=await fetch(`${API}/reserve`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username:cur.username,user_id:USER_ID})});
+    const d=await r.json();
+    if(!d.ok){
+      showToast(d.reason==='reserved'?`⏳ Зарезервирован ещё ${d.minutes} мин`:'❌ Недоступен');
+      return;
+    }
+  }catch{/* офлайн — продолжаем */}
+  if(tg){
+    tg.sendData(JSON.stringify({action:'buy',username:cur.username,stars:cur.price}));
+    closeMoDirect();
+  } else {
+    showToast(`✓ Запрос на @${cur.username} отправлен!`);
+    closeMoDirect();
+  }
+}
+
+function watchAndClose(){
+  if(!cur) return;
+  addWatchUsername(cur.username);
+  closeMoDirect();
+}
+function watchFromCard(username){ addWatchUsername(username); }
+
+// ── Watchlist ─────────────────────────────
+let watchItems=[];
+function showWatchScreen(){ renderWatchList(); }
+function renderWatchList(){
+  const el=document.getElementById('wList');
+  if(!watchItems.length){
+    el.innerHTML=`<div style="text-align:center;padding:32px;color:var(--t3)"><div style="font-size:40px;margin-bottom:10px">🔔</div><div style="font-size:14px;color:var(--t2);margin-bottom:6px">Вотчлист пуст</div><div style="font-size:12px">Введите ник выше или нажмите 🔔 на карточке</div></div>`;
+    return;
+  }
+  const inCat=new Set(all.map(i=>i.username));
+  el.innerHTML=watchItems.map(u=>{
+    const available=inCat.has(u);
+    const item=all.find(i=>i.username===u);
+    return `<div class="wi">
+      <div><div class="win">${u}</div>
+      <div class="wis">${available?`🟢 В продаже · ${fmt(item.price)} ⭐`:'⏳ Ожидаем появления'}</div></div>
+      <span class="wia" onclick="removeWatch('${u}')">✕</span>
+    </div>`;
+  }).join('');
+}
+function addWatch(){
+  const val=document.getElementById('wiIn').value.trim().toLowerCase();
+  if(val.length<3){ showToast('Минимум 3 символа'); return; }
+  addWatchUsername(val);
+  document.getElementById('wiIn').value='';
+}
+function addWatchUsername(username){
+  if(watchItems.includes(username)){ showToast(`Уже следите за @${username}`); return; }
+  watchItems.push(username);
+  saveWatch(); renderWatchList();
+  showToast(`🔔 Следите за @${username}`);
+  if(tg) tg.sendData(JSON.stringify({action:'watch',username}));
+}
+function removeWatch(username){
+  watchItems=watchItems.filter(u=>u!==username);
+  saveWatch(); renderWatchList();
+  showToast(`Отписались от @${username}`);
+}
+function saveWatch(){ try{ localStorage.setItem('wl',JSON.stringify(watchItems)); }catch{} }
+function loadWatch(){ try{ watchItems=JSON.parse(localStorage.getItem('wl')||'[]'); }catch{ watchItems=[]; } }
+
+// ── Filters ───────────────────────────────
+function toggleFilter(){
+  document.getElementById('fp').classList.toggle('open');
+  document.getElementById('btnFilter').classList.toggle('on');
+}
+function setCat(c,el){
+  flt.cat=c;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on'); render();
+}
+function setSort(v,el){
+  flt.sort=v;
+  if(el){ document.querySelectorAll('.chip[onclick*="setSort"]').forEach(c=>c.classList.remove('on')); el.classList.add('on'); }
+  render();
+}
+function setLen(v,el){
+  flt.maxLen=v;
+  document.querySelectorAll('.chip[onclick*="setLen"]').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on'); render();
+}
+function onPrice(v){
+  flt.maxPrice=parseInt(v);
+  document.getElementById('prv').textContent=`${fmt(v)} ⭐`; render();
+}
+function onSearch(v){
+  flt.search=v.toLowerCase().trim();
+  document.getElementById('siCl').style.display=v?'block':'none'; render();
+}
+function clearSearch(){
+  document.getElementById('si').value=''; flt.search='';
+  document.getElementById('siCl').style.display='none'; render();
+}
+
+// ── Screens ───────────────────────────────
+function showScreen(name){
+  document.querySelectorAll('.sc-wrap').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+  document.getElementById('srchWrap').style.display=name==='catalog'?'':'none';
+  if(name==='catalog'){
+    document.getElementById('scCatalog').classList.add('on');
+    document.getElementById('navC').classList.add('on');
+  } else if(name==='watch'){
+    document.getElementById('scWatch').classList.add('on');
+    document.getElementById('navW').classList.add('on');
+    showWatchScreen();
+  }
+}
+
+// ── Utils ─────────────────────────────────
+function fmt(n){ return Number(n).toLocaleString('ru-RU'); }
+function showToast(m){
+  const t=document.getElementById('toast');
+  t.textContent=m; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2400);
+}
+
+// ── Boot ──────────────────────────────────
+loadWatch();
+</script>
+</body>
+</html>
