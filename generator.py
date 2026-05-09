@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 CHECK_CONCURRENCY = 5   # сколько ников проверять параллельно
-CATALOG_TARGET = 50     # сколько ников держать в каталоге
+CATALOG_TARGET = 200    # сколько ников держать в каталоге
 GENERATE_BATCH = 60     # сколько генерировать за раз
 
 HEADERS_TG = {
