@@ -116,58 +116,96 @@ async def generate_usernames_ai(count: int = GENERATE_BATCH) -> list[dict]:
 
 
 def _generate_local(count: int) -> list[dict]:
-    """Локальная генерация если нет API ключа."""
-    prefixes = ["x","z","neo","rex","vox","nox","kael","ryvn","luxo","zero",
-                "nova","dark","iron","wolf","hawk","byte","code","void","flux"]
-    suffixes = ["","x","z","o","a","us","ix","ex","ar","on","an","yr","ox"]
-    words = {
-        "Природа":    ["wolf","bear","fox","hawk","eagle","storm","snow","ice","fire","rain","stone","moon"],
-        "Статус":     ["king","boss","alpha","elite","prime","vip","rex","apex","titan","lord","chief"],
-        "Технологии": ["neo","dev","byte","code","pixel","zero","void","cyber","dark","shell","root"],
-        "Стиль":      ["cool","vibe","raw","pure","mono","zen","ghost","stealth","onyx","noir","blaze"],
-        "Финансы":    ["rich","cash","coin","mint","gain","vault","fund","stack","yield","asset"],
-        "Космос":     ["nova","star","orbit","comet","pulse","zenith","dawn","dusk","rise","glow"],
-        "Имена":      ["max","leo","kai","zara","nora","mila","luka","alex","kira","dima","jake"],
-        "Премиум":    ["x","pro","one","a"],
+    """
+    Генерирует нестандартные ники без API.
+    Фокус на необычных комбинациях — популярные слова давно заняты.
+    """
+    # Слоги: согласная + гласная (CV) и согласная + гласная + согласная (CVC)
+    cv  = ["ka","ke","ki","ko","ku","za","ze","zi","zo","zu",
+           "xa","xe","xi","xo","xu","va","ve","vi","vo","vu",
+           "ra","re","ri","ro","ru","na","ne","ni","no","nu",
+           "la","le","li","lo","lu","ma","me","mi","mo","mu",
+           "ba","be","bi","bo","bu","ta","te","ti","to","tu",
+           "fa","fe","fi","fo","fu","da","de","di","do","du",
+           "sa","se","si","so","su","pa","pe","pi","po","pu",
+           "ga","ge","gi","go","gu","ja","je","ji","jo","ju",
+           "wy","ry","ly","ny","zy","xy","ky","vy","ty","dy"]
+    cvc = ["kal","kex","zor","vax","nyx","ryn","lux","mox","bel","tek",
+           "zon","vir","nox","rex","dex","hex","vex","zax","kyl","ryz",
+           "lev","mev","byx","tyz","fax","doz","gex","jyx","pov","syx",
+           "kor","vel","wyx","ryv","luz","myz","bov","tyx","foz","dyx"]
+    endings = ["","x","z","o","a","ix","ox","el","ul","yr","iv","ax","ez","ov","yn"]
+    rare_combos = ["zr","vr","kr","xr","nr","zm","vn","kn","xn","wn",
+                   "zl","vl","kl","xl","nl","zt","vt","kt","xt","nt"]
+
+    categories = {
+        "Стиль":      ("nyx vex zor lux mox kael ryvn zerov noxe luxo "
+                       "krix vael zyne myre loxe keva ziva nyxo velz".split()),
+        "Технологии": ("byte0 h4x code9 r00t v01d z3ro k1ll n3on 4pex "
+                       "d4ta fl0w s0ck3t d3v null ptr".split()),
+        "Космос":     ("nova0 astr zyra kael9 vega5 oryx lyra8 zeno "
+                       "axon5 nova9 ryze solx vrix lyze oxen".split()),
+        "Статус":     ("g0ld kr0n pr1m xboss v1p k1ng apex9 l0rd "
+                       "ch13f t1tan 3l1te z4r s1r d0m".split()),
+        "Природа":    ("w0lf b34r f0x h4wk 3agl st0rm sn0w 1ce "
+                       "f1re r41n st0ne m00n r4ven th0r".split()),
+        "Имена":      ("m4x l3o k4i r3x z4ra n0ra m1la "
+                       "luk4 al3x k1ra d1ma j4ke ry4n".split()),
+        "Премиум":    ("x0 z1 k9 v8 r3x n0x z3n x1v "
+                       "k0r v3l n4x z0r l3v".split()),
+        "Финансы":    ("c4sh c01n m1nt g4in v4ult "
+                       "fund9 st4ck y13ld tr4de".split()),
     }
 
     result = []
-    seen = set()
+    seen   = set()
     attempts = 0
 
-    while len(result) < count and attempts < count * 10:
+    while len(result) < count and attempts < count * 30:
         attempts += 1
-        cat = random.choice(list(words.keys()))
-        pool = words[cat]
+        cat = random.choice(list(categories.keys()))
 
-        mode = random.randint(0, 3)
+        mode = random.randint(0, 5)
+
         if mode == 0:
-            u = random.choice(pool)
-        elif mode == 1:
-            u = random.choice(prefixes) + random.choice(pool)
-        elif mode == 2:
-            u = random.choice(pool) + random.choice(suffixes)
-        else:
-            # два коротких слова
-            w1 = random.choice(pool)
-            w2 = random.choice(pool)
-            if w1 != w2:
-                u = w1 + w2
+            # Готовый редкий вариант из категории
+            u = random.choice(categories[cat])
 
-        u = u.lower()
+        elif mode == 1:
+            # CV + CV
+            u = random.choice(cv) + random.choice(cv)
+
+        elif mode == 2:
+            # CVC + ending
+            u = random.choice(cvc) + random.choice(endings)
+
+        elif mode == 3:
+            # CV + CVC
+            u = random.choice(cv) + random.choice(cvc)
+
+        elif mode == 4:
+            # CVC + цифра
+            u = random.choice(cvc) + str(random.randint(0, 9))
+
+        else:
+            # CV + CV + цифра или буква
+            tail = str(random.randint(0, 9)) if random.random() < 0.5 else random.choice("xzkvn")
+            u = random.choice(cv) + random.choice(cv) + tail
+
+        u = u.lower().strip()
         if u in seen or not re.match(r'^[a-z][a-z0-9]{2,11}$', u):
             continue
         seen.add(u)
 
         read = 9 if len(u) <= 4 else 8 if len(u) <= 6 else 7 if len(u) <= 8 else 6
-        uniq = 9 if len(u) <= 4 else 7 if len(u) <= 6 else 6
+        uniq = 9 if len(u) <= 4 else 8 if len(u) <= 6 else 6
 
         result.append({
-            "username":   u,
-            "category":   cat,
+            "username":    u,
+            "category":    cat,
             "readability": read,
             "uniqueness":  uniq,
-            "reason":      "local generation",
+            "reason":      "generated",
         })
 
     return result

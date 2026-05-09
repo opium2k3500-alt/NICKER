@@ -12,7 +12,7 @@ from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
-AUTOFILL_INTERVAL = int(os.getenv("AUTOFILL_INTERVAL", "1800"))   # 30 минут
+AUTOFILL_INTERVAL = int(os.getenv("AUTOFILL_INTERVAL", "300"))    # 5 минут
 RESERVE_CHECK_INTERVAL = 60                                         # 1 минута
 
 
