@@ -68,7 +68,7 @@ def categories():
 @app.route("/api/check-admin")
 def check_admin():
     user_id  = request.args.get("user_id", type=int)
-    admin_id = int(os.getenv("ADMIN_ID", "0"))
+    admin_id = int(os.getenv("ADMIN_ID", "0").strip())
     return jsonify({"is_admin": user_id == admin_id and admin_id != 0})
 
 
