@@ -81,10 +81,10 @@
   .ct{padding:12px 12px 9px;position:relative}
   .ccat{font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:var(--t3);margin-bottom:6px;font-weight:500}
 
-  /* BLURRED USERNAME */
+  /* MASKED USERNAME */
   .cname-blur{display:flex;align-items:center;gap:1px;margin-bottom:9px;height:22px;overflow:hidden}
   .bat{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:var(--acc2);flex-shrink:0}
-  .bltx{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:var(--text);filter:blur(5px);user-select:none;white-space:nowrap}
+  .bltx{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:var(--t2);letter-spacing:2px;user-select:none;white-space:nowrap}
 
   /* PROPS */
   .props{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
@@ -360,26 +360,29 @@ function render(){
   g.innerHTML=items.map((it,i)=>card(it,i)).join('');
 }
 
+// ── Utils ─────────────────────────────────
+function fmt(n){ return Number(n).toLocaleString('ru-RU'); }
+function mask(u){
+  if(!u||u.length===0) return '???';
+  return u[0] + '✦'.repeat(Math.max(1, u.length-1));
+}
+
 // ── Card ──────────────────────────────────
 function card(it,i){
   const hot = it.price>=7000;
   const res = it.is_reserved && it.reserved_by!==USER_ID;
-  const digits = it.has_digits ? '🔢 Есть цифры' : '🔤 Буквы';
-  const repeats = it.repeat_count > 0
-    ? `🔁 Повт: ${it.repeat_count}`
-    : '✨ Уникальные';
 
   return `<div class="card${hot?' hot':''}${res?' reserved':''}"
     onclick='openMo(${JSON.stringify(it)})' style="animation-delay:${i*25}ms">
     <div class="ct">
       <div class="ccat">${it.category}</div>
       <div class="cname-blur">
-        <span class="bat">@</span><span class="bltx">${it.username}</span>
+        <span class="bat">@</span><span class="bltx">${mask(it.username)}</span>
       </div>
       <div class="props">
         <div class="pr"><span class="pic">📏</span><span class="pval">${it.length} симв.</span></div>
         <div class="pr"><span class="pic">${it.has_digits?'🔢':'🔤'}</span><span class="pval">${it.has_digits?'Есть цифры':'Буквы'}</span></div>
-        <div class="pr"><span class="pic">🔁</span><span class="pval">Повторяющихся: ${it.repeat_count}</span></div>
+        <div class="pr"><span class="pic">🔁</span><span class="pval">Повторов: ${it.repeat_count}</span></div>
       </div>
       <div class="cmeta">
         <span class="badge bl">${it.length} симв.</span>
@@ -403,22 +406,27 @@ function openMo(it){
   cur=it;
   const res = it.is_reserved && it.reserved_by!==USER_ID;
   document.getElementById('mc').innerHTML=`
-    <div class="mun">${it.username}</div>
-    <div class="mcat">${it.category} · ${it.length} символов · ${it.has_digits?'Есть цифры':'Только буквы'} · повторяющихся: ${it.repeat_count}</div>
+    <div style="text-align:center;margin-bottom:4px">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:800;color:var(--acc2)">@</span><span style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:800;color:var(--t3);letter-spacing:3px">${mask(it.username)}</span>
+    </div>
+    <div style="text-align:center;font-size:11px;color:var(--t3);margin-bottom:16px">🎁 Ник откроется после оплаты</div>
     <div class="mscores">
-      <div class="msc"><div class="mscv" style="color:var(--green)">${it.length}</div><div class="mscl">Длина</div></div>
-      <div class="msc"><div class="mscv" style="color:var(--acc2)">${it.has_digits?'✓':'—'}</div><div class="mscl">Цифры</div></div>
-      <div class="msc"><div class="mscv" style="color:var(--teal)">${it.repeat_count}</div><div class="mscl">Повторы</div></div>
+      <div class="msc"><div class="mscv" style="color:var(--green)">${it.length}</div><div class="mscl">Символов</div></div>
+      <div class="msc"><div class="mscv" style="color:var(--acc2)">${it.has_digits?'🔢':'🔤'}</div><div class="mscl">${it.has_digits?'Цифры':'Буквы'}</div></div>
+      <div class="msc"><div class="mscv" style="color:var(--teal)">${it.repeat_count}</div><div class="mscl">Повторов</div></div>
     </div>
     <div class="mpb">
-      <div><div class="mpl">Цена</div><div class="mpn">${fmt(it.price)}</div></div>
-      <span style="font-size:20px">⭐</span>
+      <div>
+        <div class="mpl">Категория: ${it.category}</div>
+        <div class="mpn">${fmt(it.price)}</div>
+      </div>
+      <span style="font-size:24px">⭐</span>
     </div>
-    ${res?`<div class="res-warn" style="display:block">⏳ Ник зарезервирован — доступен через ~${getResTime(it)} мин</div>`:''}
-    <div class="cn">✓ Комиссия Telegram 30% уже включена</div>
+    ${res?`<div class="res-warn" style="display:block">⏳ Зарезервирован — доступен через ~${getResTime(it)} мин</div>`:''}
+    <div class="cn">✓ Комиссия Telegram 30% включена · После оплаты ник придёт спойлером</div>
     ${res
       ? `<button class="bwf" onclick="watchAndClose()">🔔 Уведомить когда освободится</button>`
-      : `<button class="bbf" onclick="doBuy()">✦ Купить за ${fmt(it.price)} ⭐</button>
+      : `<button class="bbf" onclick="doBuy()">🎁 Купить сюрприз за ${fmt(it.price)} ⭐</button>
          <button class="bwf" onclick="watchAndClose()">🔔 В вотчлист</button>`
     }
     <button class="bcc" onclick="closeMoDirect()">Закрыть</button>
@@ -551,8 +559,6 @@ function showScreen(name){
   }
 }
 
-// ── Utils ─────────────────────────────────
-function fmt(n){ return Number(n).toLocaleString('ru-RU'); }
 function showToast(m){
   const t=document.getElementById('toast');
   t.textContent=m; t.classList.add('show');
