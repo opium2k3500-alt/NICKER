@@ -529,14 +529,15 @@ function minsAgo(isoStr){
 function card(it,i){
   const hot = it.price>=7000;
   const res = it.is_reserved && it.reserved_by!==USER_ID;
-  const displayName = IS_ADMIN ? it.username : mask(it.username);
+  const revealed = IS_ADMIN || it.is_parked;
+  const displayName = revealed ? it.username : mask(it.username);
 
   return `<div class="card${hot?' hot':''}${res?' reserved':''}"
     onclick='openMo(${JSON.stringify(it)})' style="animation-delay:${i*25}ms">
     <div class="ct">
       <div class="ccat">${IS_ADMIN ? '👑 ' : ''}${it.category}</div>
       <div class="cname-blur">
-        <span class="bat">@</span><span class="bltx" style="${IS_ADMIN?'filter:none;color:var(--text);letter-spacing:0':''}">${displayName}</span>
+        <span class="bat">@</span><span class="bltx" style="${revealed?'filter:none;color:var(--text);letter-spacing:0':''}">${displayName}</span>
       </div>
       <div class="props">
         <div class="pr"><span class="pic">📏</span><span class="pval">${it.length} симв.</span></div>
@@ -570,9 +571,9 @@ function openMo(it){
   const res = it.is_reserved && it.reserved_by!==USER_ID;
   document.getElementById('mc').innerHTML=`
     <div style="text-align:center;margin-bottom:4px">
-      <span style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:800;color:var(--acc2)">@</span><span style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:800;${IS_ADMIN?'color:var(--text)':'color:var(--t3);letter-spacing:3px'}">${IS_ADMIN ? it.username : mask(it.username)}</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:800;color:var(--acc2)">@</span><span style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:800;${(IS_ADMIN||it.is_parked)?'color:var(--text)':'color:var(--t3);letter-spacing:3px'}">${(IS_ADMIN||it.is_parked) ? it.username : mask(it.username)}</span>
     </div>
-    <div style="text-align:center;font-size:11px;color:var(--t3);margin-bottom:16px">${IS_ADMIN ? '👑 Режим администратора' : '🎁 Ник откроется после оплаты'}</div>
+    <div style="text-align:center;font-size:11px;color:var(--t3);margin-bottom:16px">${IS_ADMIN ? '👑 Режим администратора' : it.is_parked ? '🔒 Ник защищён — зарезервирован каналом' : '🎁 Ник откроется после оплаты'}</div>
     <div class="mscores">
       <div class="msc"><div class="mscv" style="color:var(--green)">${it.length}</div><div class="mscl">Символов</div></div>
       <div class="msc"><div class="mscv" style="color:var(--acc2)">${it.has_digits?'🔢':'🔤'}</div><div class="mscl">${it.has_digits?'Цифры':'Буквы'}</div></div>

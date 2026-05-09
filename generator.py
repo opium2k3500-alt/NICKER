@@ -359,9 +359,9 @@ def calc_price(username: str, readability: int, uniqueness: int) -> int:
     has_repeat = len(set(username)) < len(username)
 
     if l <= 3:   base = 9500
-    elif l <= 4: base = 7500
-    elif l <= 5: base = 5000
-    elif l <= 6: base = 3000
+    elif l <= 4: base = 8500
+    elif l <= 5: base = 6500
+    elif l <= 6: base = 3500
     elif l <= 8: base = 1500
     else:        base = 700
 

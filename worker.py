@@ -128,7 +128,8 @@ class Worker:
         if not catalog:
             return
 
-        usernames = [item["username"] for item in catalog]
+        # Skip parked nicks — we own those channels, they'll look "taken" on t.me
+        usernames = [item["username"] for item in catalog if not item.get("is_parked")]
         logger.info(f"Monitoring {len(usernames)} catalog items...")
 
         availability = await check_batch(usernames)
