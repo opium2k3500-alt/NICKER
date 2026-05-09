@@ -326,6 +326,45 @@ async def cmd_stats(update, ctx):
         parse_mode="HTML")
 
 
+async def cmd_addnick(update, ctx):
+    from database import add_username, set_parked
+    from generator import calc_price
+    from parker import park_nick, is_configured as parker_ok
+
+    admin_id = int(os.getenv("ADMIN_ID", "5968081460"))
+    if update.effective_user.id != admin_id:
+        return
+
+    if not ctx.args:
+        await update.message.reply_text("Использование: /addnick username [цена]")
+        return
+
+    username = ctx.args[0].lower().lstrip("@")
+    if not username.isalnum() or len(username) < 3:
+        await update.message.reply_text("❌ Неверный формат ника")
+        return
+
+    price = int(ctx.args[1]) if len(ctx.args) > 1 else calc_price(username, 9, 9)
+    added = add_username(username, price, "Премиум", 9, 9, "вручную добавлен администратором")
+
+    if not added:
+        await update.message.reply_text(f"⚠️ Ник @{username} уже в каталоге")
+        return
+
+    msg = f"✅ @{username} добавлен за {price}⭐"
+
+    if parker_ok() and len(username) >= 5:
+        await update.message.reply_text(f"{msg}\n⏳ Паркую...")
+        cid = await park_nick(username)
+        if cid:
+            set_parked(username, cid)
+            msg += f"\n🔒 Запаркован (канал {cid})"
+        else:
+            msg += "\n⚠️ Не удалось запарковать"
+
+    await update.message.reply_text(msg)
+
+
 async def post_init(application):
     worker = Worker(application.bot)
     asyncio.create_task(worker.start())
@@ -340,6 +379,7 @@ def main():
     app.add_handler(CommandHandler("watch",   cmd_watch))
     app.add_handler(CommandHandler("unwatch", cmd_unwatch))
     app.add_handler(CommandHandler("stats",   cmd_stats))
+    app.add_handler(CommandHandler("addnick", cmd_addnick))
     app.add_handler(CallbackQueryHandler(cb_my_purchases, pattern="my_purchases"))
     app.add_handler(CallbackQueryHandler(cb_watchlist,    pattern="^watchlist$"))
     app.add_handler(CallbackQueryHandler(cb_about,        pattern="about"))

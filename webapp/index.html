@@ -308,6 +308,12 @@
       <div class="chip" onclick="setLen(8,this)">≤8</div>
     </div>
   </div>
+  <div class="fr"><span class="fl">Защита</span>
+    <div class="chips">
+      <div class="chip on" id="chipParked0" onclick="setParked(0,this)">Все</div>
+      <div class="chip" id="chipParked1" onclick="setParked(1,this)">🔒 Только защищённые</div>
+    </div>
+  </div>
 </div>
 
 <div class="stats">
@@ -446,7 +452,7 @@ if(tg){tg.expand();tg.setBackgroundColor('#0a0a0f');tg.setHeaderColor('#0a0a0f')
 const API = '/api';
 const USER_ID = tg?.initDataUnsafe?.user?.id || 0;
 
-let all=[], flt={cat:'Все',sort:'price_desc',maxPrice:10000,maxLen:99,search:''};
+let all=[], flt={cat:'Все',sort:'price_desc',maxPrice:10000,maxLen:99,search:'',parked:0};
 let IS_ADMIN = false;
 
 // ── Init ──────────────────────────────────
@@ -481,6 +487,7 @@ function render(){
   if(flt.maxPrice<10000) items=items.filter(i=>i.price<=flt.maxPrice);
   if(flt.maxLen<99) items=items.filter(i=>i.length<=flt.maxLen);
   if(flt.search) items=items.filter(i=>i.username.includes(flt.search));
+  if(flt.parked===1) items=items.filter(i=>i.is_parked);
 
   const ord={
     'price_desc':(a,b)=>b.price-a.price,
@@ -730,6 +737,11 @@ function setSort(v,el){
 function setLen(v,el){
   flt.maxLen=v;
   document.querySelectorAll('.chip[onclick*="setLen"]').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on'); render();
+}
+function setParked(v,el){
+  flt.parked=v;
+  document.querySelectorAll('.chip[onclick*="setParked"]').forEach(c=>c.classList.remove('on'));
   el.classList.add('on'); render();
 }
 function onPrice(v){
