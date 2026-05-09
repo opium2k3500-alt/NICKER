@@ -117,86 +117,122 @@ async def generate_usernames_ai(count: int = GENERATE_BATCH) -> list[dict]:
 
 
 def _no_repeat(s: str) -> bool:
-    """True если в строке нет повторяющихся символов."""
     return len(set(s)) == len(s)
+
+
+# Curated phonetic building blocks — sound good, not random garbage
+_ONSETS  = ["k","v","z","r","n","m","l","s","t","d","f","b","g","j","p","w",
+             "kr","vr","zr","dr","tr","gr","br","fr","pl","kl","gl","sl","fl",
+             "sk","sp","st","sn","sm","sw","sh","ch","th"]
+_NUCLEI  = ["a","e","i","o","u","ai","ae","ei","io","oa","ui","au","ea","ue",
+             "ao","ia","oi","ou"]
+_CODAS   = ["x","k","n","m","l","r","t","s","v","z","p","f","g","d",
+             "ks","nx","lv","rk","xt","nd","st","lt","nk","vn","rt","rm"]
+_DIGITS  = ["0","1","2","3","4","7","9"]  # visually clean digits
+
+# Category → (preferred onsets, preferred nuclei, color)
+_CAT_PROFILE = {
+    "Природа":    (["r","v","st","sn","sm","gr","br","fl"],  ["a","e","o","ea","ao"],   "#2d9e5e"),
+    "Статус":     (["k","v","r","z","dr","kr","tr"],         ["e","o","i","ei","io"],   "#c0a030"),
+    "Технологии": (["n","z","v","sk","s","t","sh"],          ["e","i","u","ei","ui"],   "#5b8dd9"),
+    "Стиль":      (["z","v","k","m","fl","sl","gl"],         ["o","u","a","ao","oa"],   "#9b5de5"),
+    "Финансы":    (["k","v","f","g","gr","tr","pl"],         ["a","o","u","ai","ou"],   "#e56b2d"),
+    "Космос":     (["n","z","v","st","sp","kr","vr"],        ["o","u","e","oa","ui"],   "#4ecdc4"),
+    "Имена":      (["k","l","m","n","r","j","d","b"],        ["a","i","e","ai","ia"],   "#e84393"),
+    "Премиум":    (["k","v","z","x"],                        ["e","i","o"],             "#ffffff"),
+}
 
 
 def _generate_local(count: int) -> list[dict]:
     """
-    Генерирует нестандартные произносимые ники БЕЗ повторяющихся букв.
-    4-5 символов — приоритет. Никаких популярных слов.
+    Syllable-based generator using curated onsets/nuclei/codas.
+    Produces pronounceable, brand-like nicks with per-category flavour.
     """
-    consonants = list("bcdfghjklmnpqrstvwxyz")
-    vowels     = list("aeiou")
-
-    # Паттерны (C=согласная, V=гласная, D=цифра, R=любой повтор разрешён)
-    patterns = [
-        "CVC",      # kev, zol — 3 буквы (редко, очень дорого)
-        "CVCV",     # keva, zoli — 4 буквы
-        "CVCC",     # kelt, zorn
-        "CCVC",     # zkol, brex
-        "CVCVC",    # kevan, zolik — 5 букв
-        "CVCCV",    # kelto, varke
-        "CCVCV",    # zkola, brexo
-        "CVCD",     # kev3, zol9 — с цифрой
-        "CVCVD",    # keva3, zoli9
-        "CVCVCV",   # kavelo, zoliba — 6 букв
-        "CVCCVC",   # keltov, zornex
-        "CVCCVCC",  # keltovs, zornext — 7 букв (бюджет)
-        "CVCVCVC",  # kavelox — 7 букв
-        "CVDCVC",   # ka3lov — с цифрой посередине
-        "CVCCVCD",  # keltov3
-    ]
-    # Веса: широкий ассортимент от дорогих коротких до бюджетных длинных
-    weights = [4, 20, 14, 14, 18, 10, 8, 12, 8, 12, 8, 6, 6, 8, 6]
-
     categories = list(CATEGORIES.keys())
     result = []
     seen   = set()
     attempts = 0
 
-    while len(result) < count and attempts < count * 60:
+    while len(result) < count and attempts < count * 80:
         attempts += 1
-        pattern = random.choices(patterns, weights=weights)[0]
+        cat = random.choice(categories)
+        prof = _CAT_PROFILE.get(cat, (None, None, None))
+        onsets = prof[0] or _ONSETS
+        nuclei = prof[1] or _NUCLEI
 
-        # Для коротких ников форсируем уникальные буквы; для длинных разрешаем повторы
-        allow_repeat = len(pattern) > 5
-        used_chars = set()
+        # Pick a length tier
+        tier = random.choices(
+            ["3", "4", "5", "6", "7", "4d", "5d", "6d"],
+            weights=[3, 22, 20, 14, 8, 12, 10, 8]
+        )[0]
+        has_digit = tier.endswith("d")
+        tlen = int(tier[0])
+
+        # Build nick from syllables
         u = ""
-        valid = True
+        if tlen == 3:
+            # onset + nucleus, 2-3 total chars
+            o = random.choice(onsets[:14])   # short onsets only
+            n = random.choice(nuclei[:8])     # single vowels
+            u = o + n
+            if len(u) < 3:
+                u += random.choice(_CODAS[:8])
+        elif tlen == 4:
+            o = random.choice(onsets[:14])
+            n = random.choice(nuclei[:8])
+            c = random.choice(_CODAS[:12])
+            u = o + n + c
+            if len(u) > 5: u = u[:4]
+            if len(u) < 4:
+                u += random.choice(list("aeiou"))
+        elif tlen == 5:
+            # two-syllable: onset+nucleus + onset+nucleus+coda or similar
+            o1 = random.choice(onsets[:14]); n1 = random.choice(nuclei[:8])
+            o2 = random.choice(onsets[:14]); n2 = random.choice(nuclei[:8])
+            u = (o1+n1+o2+n2)[:6]
+            while len(u) < 5:
+                u += random.choice(list("aeious"))
+            u = u[:5]
+        elif tlen == 6:
+            o1=random.choice(onsets[:14]); n1=random.choice(nuclei[:8])
+            o2=random.choice(onsets[:14]); n2=random.choice(nuclei[:8])
+            c =random.choice(_CODAS[:10])
+            u = (o1+n1+o2+n2+c)[:7]
+            while len(u) < 6: u += random.choice(list("aeiou"))
+            u = u[:6]
+        else:  # 7
+            o1=random.choice(onsets[:14]); n1=random.choice(nuclei[:8])
+            o2=random.choice(onsets[:14]); n2=random.choice(nuclei[:8])
+            c1=random.choice(_CODAS[:10]); c2=random.choice(_CODAS[:8])
+            u = (o1+n1+o2+n2+c1+c2)[:8]
+            while len(u) < 7: u += random.choice(list("aeionrs"))
+            u = u[:7]
 
-        for ch in pattern:
-            if ch == "C":
-                pool = consonants if allow_repeat else [c for c in consonants if c not in used_chars]
-                if not pool: valid = False; break
-                c = random.choice(pool)
-                u += c; used_chars.add(c)
-            elif ch == "V":
-                pool = vowels if allow_repeat else [v for v in vowels if v not in used_chars]
-                if not pool: valid = False; break
-                v = random.choice(pool)
-                u += v; used_chars.add(v)
-            elif ch == "D":
-                u += str(random.randint(1, 9))
+        # Insert digit if tier ends with 'd'
+        if has_digit and len(u) >= 2:
+            pos = random.randint(1, len(u)-1)
+            d   = random.choice(_DIGITS)
+            u   = u[:pos] + d + u[pos:]
+            u   = u[:12]
 
-        if not valid or not u or u in seen:
-            continue
+        u = u.lower()
         if not re.match(r'^[a-z][a-z0-9]{2,11}$', u):
             continue
-
+        if u in seen:
+            continue
         seen.add(u)
-        cat  = random.choice(categories)
-        l    = len(u)
-        read = 9 if l <= 4 else 8 if l <= 5 else 7 if l <= 6 else 6
+
+        l       = len(u)
         has_rep = not _no_repeat(u)
-        uniq = 10 if (l <= 4 and not has_rep) else 9 if not has_rep else 7 if l <= 6 else 6
+        read    = 9 if l <= 4 else 8 if l <= 5 else 7 if l <= 6 else 6
+        uniq    = 10 if (l <= 4 and not has_rep) else 9 if not has_rep else 7 if l <= 6 else 6
 
         result.append({
             "username":    u,
             "category":    cat,
             "readability": read,
             "uniqueness":  uniq,
-            "reason":      "generated",
+            "reason":      "syllable-generated",
         })
 
     return result
