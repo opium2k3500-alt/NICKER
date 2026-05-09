@@ -4,6 +4,11 @@ from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 DB_PATH = os.getenv("DB_PATH", "market.db")
+
+# Create directory for DB if it doesn't exist (e.g. Railway Volume at /data)
+_db_dir = os.path.dirname(DB_PATH)
+if _db_dir:
+    os.makedirs(_db_dir, exist_ok=True)
 RESERVE_MINUTES = 30
 
 
