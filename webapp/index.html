@@ -545,9 +545,12 @@ function card(it,i){
       </div>
       <div class="cmeta">
         <span class="badge bl">${it.length} симв.</span>
-        ${(it.view_count||0)>=5?`<span class="badge bfire">🔥 ${it.view_count} просм.</span>`:`<span class="badge ba">${it.category}</span>`}
-        ${res?`<span class="badge br2">Занят</span>`:
-          (it.verified_at?`<span class="badge bg">✓ ${minsAgo(it.verified_at)}</span>`:'')}
+        ${(it.view_count||0)>=5?`<span class="badge bfire">🔥 ${it.view_count} просм.`
+          :`<span class="badge ba">${it.category}`}
+        </span>
+        ${res ? `<span class="badge br2">Занят</span>`
+          : it.is_parked ? `<span class="badge bg">🔒 Защищён</span>`
+          : it.verified_at ? `<span class="badge bg">✓ ${minsAgo(it.verified_at)}</span>` : ''}
       </div>
     </div>
     <div class="cb">

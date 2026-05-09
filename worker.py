@@ -24,11 +24,16 @@ class Worker:
     async def start(self):
         self.running = True
         logger.info("Worker started")
-        await asyncio.gather(
+        from parker import is_configured as parker_ok
+        tasks = [
             self._loop_autofill(),
             self._loop_reservations(),
             self._loop_catalog_monitor(),
-        )
+        ]
+        if parker_ok():
+            logger.info("Parker configured — starting parking loop")
+            tasks.append(self._loop_parker())
+        await asyncio.gather(*tasks)
 
     def stop(self):
         self.running = False
@@ -130,6 +135,13 @@ class Worker:
         removed = 0
         for username, is_free in availability.items():
             if not is_free:
+                # Unpark before removing
+                from database import get_channel_id
+                from parker import unpark_nick, is_configured as parker_ok
+                if parker_ok():
+                    cid = get_channel_id(username)
+                    if cid:
+                        await unpark_nick(cid)
                 remove_username(username)
                 removed += 1
                 logger.info(f"Removed taken @{username} from catalog")
@@ -138,6 +150,31 @@ class Worker:
 
         if removed:
             logger.info(f"Catalog monitor: removed {removed} taken usernames")
+
+    # ── Парковка ников ───────────────────────
+
+    async def _loop_parker(self):
+        """Паркует незапаркованные ники по одному каждые 45 секунд."""
+        await asyncio.sleep(60)  # первый запуск через минуту
+        while self.running:
+            try:
+                await self._park_one()
+            except Exception as e:
+                logger.error(f"Parker loop error: {e}")
+            await asyncio.sleep(45)
+
+    async def _park_one(self):
+        from database import get_unparked_catalog, set_parked
+        from parker import park_nick
+
+        pending = get_unparked_catalog()
+        if not pending:
+            return
+
+        username = pending[0]
+        channel_id = await park_nick(username)
+        if channel_id:
+            set_parked(username, channel_id)
 
     # ── Снятие резерваций ────────────────────
 

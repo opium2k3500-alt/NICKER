@@ -44,7 +44,12 @@ def init_db():
         )
     """)
     # Add columns to existing DB if missing (migration)
-    for col, typedef in [("verified_at", "TEXT"), ("view_count", "INTEGER DEFAULT 0")]:
+    for col, typedef in [
+        ("verified_at",  "TEXT"),
+        ("view_count",   "INTEGER DEFAULT 0"),
+        ("is_parked",    "INTEGER DEFAULT 0"),
+        ("channel_id",   "INTEGER"),
+    ]:
         try:
             cur.execute(f"ALTER TABLE usernames ADD COLUMN {col} {typedef}")
         except Exception:
@@ -268,6 +273,37 @@ def increment_view(username: str):
     c = db()
     c.execute("UPDATE usernames SET view_count=view_count+1 WHERE username=?", (username.lower(),))
     c.commit(); c.close()
+
+
+def set_parked(username: str, channel_id: int):
+    c = db()
+    c.execute("UPDATE usernames SET is_parked=1, channel_id=? WHERE username=?",
+              (channel_id, username.lower()))
+    c.commit(); c.close()
+
+
+def get_unparked_catalog():
+    """Returns nicks that are free and not yet parked (5+ chars only)."""
+    c = db()
+    cur = c.cursor()
+    cur.execute("""
+        SELECT username FROM usernames
+        WHERE is_sold=0 AND is_parked=0 AND length>=5
+        ORDER BY length ASC, added_at ASC
+        LIMIT 5
+    """)
+    rows = [r["username"] for r in cur.fetchall()]
+    c.close()
+    return rows
+
+
+def get_channel_id(username: str) -> int | None:
+    c = db()
+    cur = c.cursor()
+    cur.execute("SELECT channel_id FROM usernames WHERE username=?", (username.lower(),))
+    row = cur.fetchone()
+    c.close()
+    return row["channel_id"] if row else None
 
 
 def release_expired():

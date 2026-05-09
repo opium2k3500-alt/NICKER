@@ -253,6 +253,17 @@ async def successful_payment(update, ctx):
     username = payload[4:]
     mark_sold(username, user_id, stars)
 
+    # Unpark: delete the parking channel so buyer can claim the username
+    try:
+        from database import get_channel_id
+        from parker import unpark_nick, is_configured as parker_ok
+        if parker_ok():
+            cid = get_channel_id(username)
+            if cid:
+                await unpark_nick(cid)
+    except Exception as e:
+        logger.warning(f"Unpark failed for @{username}: {e}")
+
     await update.message.reply_text(
         f"🧾 <b>ЧЕК ОБ ОПЛАТЕ</b>\n"
         f"{'─' * 28}\n"
