@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 CHECK_CONCURRENCY = 5   # сколько ников проверять параллельно
-CATALOG_TARGET = 30     # сколько ников держать в каталоге
-GENERATE_BATCH = 40     # сколько генерировать за раз
+CATALOG_TARGET = 50     # сколько ников держать в каталоге
+GENERATE_BATCH = 60     # сколько генерировать за раз
 
 HEADERS_TG = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -129,20 +129,26 @@ def _generate_local(count: int) -> list[dict]:
     consonants = list("bcdfghjklmnpqrstvwxyz")
     vowels     = list("aeiou")
 
-    # Паттерны (C=согласная, V=гласная, D=цифра)
+    # Паттерны (C=согласная, V=гласная, D=цифра, R=любой повтор разрешён)
     patterns = [
-        "CVCV",   # keva, zoli, mabe  — 4 буквы
-        "CVCC",   # kelt, zorn, vark
-        "CCVC",   # zkol, brex, kliv
-        "CVCVC",  # kevan, zolik, maber — 5 букв
-        "CVCCV",  # kelto, varke, mirba
-        "CCVCV",  # zkola, brexo, klive
-        "CVC",    # kev, zol, mir — 3 буквы (редко, дорого)
-        "CVCD",   # kev3, zol9 — с цифрой
-        "CVCVD",  # keva3, zoli9
+        "CVC",      # kev, zol — 3 буквы (редко, очень дорого)
+        "CVCV",     # keva, zoli — 4 буквы
+        "CVCC",     # kelt, zorn
+        "CCVC",     # zkol, brex
+        "CVCVC",    # kevan, zolik — 5 букв
+        "CVCCV",    # kelto, varke
+        "CCVCV",    # zkola, brexo
+        "CVCD",     # kev3, zol9 — с цифрой
+        "CVCVD",    # keva3, zoli9
+        "CVCVCV",   # kavelo, zoliba — 6 букв
+        "CVCCVC",   # keltov, zornex
+        "CVCCVCC",  # keltovs, zornext — 7 букв (бюджет)
+        "CVCVCVC",  # kavelox — 7 букв
+        "CVDCVC",   # ka3lov — с цифрой посередине
+        "CVCCVCD",  # keltov3
     ]
-    # Веса: 4-буквенные приоритетны
-    weights = [30, 20, 20, 25, 15, 10, 5, 15, 10]
+    # Веса: широкий ассортимент от дорогих коротких до бюджетных длинных
+    weights = [4, 20, 14, 14, 18, 10, 8, 12, 8, 12, 8, 6, 6, 8, 6]
 
     categories = list(CATEGORIES.keys())
     result = []
@@ -153,23 +159,25 @@ def _generate_local(count: int) -> list[dict]:
         attempts += 1
         pattern = random.choices(patterns, weights=weights)[0]
 
+        # Для коротких ников форсируем уникальные буквы; для длинных разрешаем повторы
+        allow_repeat = len(pattern) > 5
         used_chars = set()
         u = ""
         valid = True
 
         for ch in pattern:
             if ch == "C":
-                pool = [c for c in consonants if c not in used_chars]
+                pool = consonants if allow_repeat else [c for c in consonants if c not in used_chars]
                 if not pool: valid = False; break
                 c = random.choice(pool)
                 u += c; used_chars.add(c)
             elif ch == "V":
-                pool = [v for v in vowels if v not in used_chars]
+                pool = vowels if allow_repeat else [v for v in vowels if v not in used_chars]
                 if not pool: valid = False; break
                 v = random.choice(pool)
                 u += v; used_chars.add(v)
             elif ch == "D":
-                u += str(random.randint(1, 9))  # цифра (не 0 в начале не будет)
+                u += str(random.randint(1, 9))
 
         if not valid or not u or u in seen:
             continue
@@ -179,8 +187,9 @@ def _generate_local(count: int) -> list[dict]:
         seen.add(u)
         cat  = random.choice(categories)
         l    = len(u)
-        read = 9 if l <= 4 else 8 if l <= 5 else 7
-        uniq = 10 if (l <= 4 and _no_repeat(u)) else 9 if _no_repeat(u) else 7
+        read = 9 if l <= 4 else 8 if l <= 5 else 7 if l <= 6 else 6
+        has_rep = not _no_repeat(u)
+        uniq = 10 if (l <= 4 and not has_rep) else 9 if not has_rep else 7 if l <= 6 else 6
 
         result.append({
             "username":    u,
