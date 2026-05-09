@@ -4,4 +4,4 @@ builder = "nixpacks"
 [deploy]
 startCommand = "bash start.sh"
 healthcheckPath = "/api/stats"
-healthcheckTimeout = 300
+healthcheckTimeout = 600
