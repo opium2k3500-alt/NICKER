@@ -38,9 +38,17 @@ def init_db():
             reserved_by    INTEGER,
             reserved_until TEXT,
             added_at       TEXT DEFAULT CURRENT_TIMESTAMP,
+            verified_at    TEXT DEFAULT CURRENT_TIMESTAMP,
+            view_count     INTEGER DEFAULT 0,
             sold_at        TEXT
         )
     """)
+    # Add columns to existing DB if missing (migration)
+    for col, typedef in [("verified_at", "TEXT"), ("view_count", "INTEGER DEFAULT 0")]:
+        try:
+            cur.execute(f"ALTER TABLE usernames ADD COLUMN {col} {typedef}")
+        except Exception:
+            pass
 
     cur.execute("""
         CREATE TABLE IF NOT EXISTS purchases (
@@ -247,6 +255,19 @@ def remove_username(username: str):
     c.execute("DELETE FROM usernames WHERE username=? AND is_sold=0", (username.lower(),))
     c.commit()
     c.close()
+
+
+def update_verified_at(username: str):
+    c = db()
+    c.execute("UPDATE usernames SET verified_at=? WHERE username=?",
+              (datetime.now().isoformat(), username.lower()))
+    c.commit(); c.close()
+
+
+def increment_view(username: str):
+    c = db()
+    c.execute("UPDATE usernames SET view_count=view_count+1 WHERE username=?", (username.lower(),))
+    c.commit(); c.close()
 
 
 def release_expired():

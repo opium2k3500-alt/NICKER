@@ -98,6 +98,8 @@
   .bl{background:rgba(56,217,217,.1);color:var(--teal)}
   .ba{background:rgba(124,106,247,.1);color:var(--acc2)}
   .br2{background:rgba(248,113,113,.1);color:var(--red)}
+  .bg{background:rgba(74,222,128,.1);color:var(--green)}
+  .bfire{background:rgba(255,100,0,.12);color:#ff7a30}
 
   /* CARD BOTTOM */
   .cb{padding:9px 12px 12px;border-top:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between;background:var(--s2)}
@@ -515,6 +517,13 @@ function mask(u){
   if(!u||u.length===0) return '???';
   return u[0] + '✦'.repeat(Math.max(1, u.length-1));
 }
+function minsAgo(isoStr){
+  if(!isoStr) return null;
+  const diff = (Date.now() - new Date(isoStr).getTime()) / 60000;
+  if(diff < 1) return 'только что';
+  if(diff < 60) return `${Math.floor(diff)} мин назад`;
+  return `${Math.floor(diff/60)} ч назад`;
+}
 
 // ── Card ──────────────────────────────────
 function card(it,i){
@@ -536,8 +545,9 @@ function card(it,i){
       </div>
       <div class="cmeta">
         <span class="badge bl">${it.length} симв.</span>
-        <span class="badge ba">${it.category}</span>
-        ${res?`<span class="badge br2">Занят</span>`:''}
+        ${(it.view_count||0)>=5?`<span class="badge bfire">🔥 ${it.view_count} просм.</span>`:`<span class="badge ba">${it.category}</span>`}
+        ${res?`<span class="badge br2">Занят</span>`:
+          (it.verified_at?`<span class="badge bg">✓ ${minsAgo(it.verified_at)}</span>`:'')}
       </div>
     </div>
     <div class="cb">

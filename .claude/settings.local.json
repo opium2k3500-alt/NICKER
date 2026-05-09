@@ -45,7 +45,8 @@
       "Bash(pkill -9 -f \"bot.py\")",
       "Bash(> /tmp/nicker_bot.log)",
       "Bash(echo \"PID: $!\")",
-      "Bash(sqlite3 *)"
+      "Bash(sqlite3 *)",
+      "Bash(git push *)"
     ]
   }
 }

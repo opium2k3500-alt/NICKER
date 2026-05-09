@@ -106,17 +106,17 @@ class Worker:
     # ── Мониторинг каталога ──────────────────
 
     async def _loop_catalog_monitor(self):
-        """Каждые 7 минут проверяет все ники в каталоге — не занял ли их кто-то."""
-        await asyncio.sleep(120)  # первая проверка через 2 минуты
+        """Каждые 3 минуты проверяет все ники в каталоге — не занял ли их кто-то."""
+        await asyncio.sleep(60)  # первая проверка через 1 минуту
         while self.running:
             try:
                 await self._check_existing_catalog()
             except Exception as e:
                 logger.error(f"Catalog monitor error: {e}")
-            await asyncio.sleep(420)  # затем каждые 7 минут
+            await asyncio.sleep(180)  # затем каждые 3 минуты
 
     async def _check_existing_catalog(self):
-        from database import get_catalog, remove_username
+        from database import get_catalog, remove_username, update_verified_at
         from generator import check_batch
 
         catalog = get_catalog()
@@ -133,6 +133,8 @@ class Worker:
                 remove_username(username)
                 removed += 1
                 logger.info(f"Removed taken @{username} from catalog")
+            else:
+                update_verified_at(username)
 
         if removed:
             logger.info(f"Catalog monitor: removed {removed} taken usernames")

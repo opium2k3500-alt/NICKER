@@ -1,16 +1,38 @@
 import os
+import asyncio
+import ssl
 import requests as rq
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 from database import (init_db, get_catalog, get_username, get_stats,
                       reserve, check_reservation, watch_add, upsert_user,
-                      roulette_create_session, roulette_get_result)
+                      roulette_create_session, roulette_get_result,
+                      increment_view, update_verified_at, remove_username)
 
 load_dotenv()
 app = Flask(__name__)
 CORS(app)
 init_db()
+
+
+def _live_check(username: str) -> bool:
+    """Sync wrapper around async availability check. Used before invoice creation."""
+    try:
+        import aiohttp
+        from generator import check_available
+
+        async def _run():
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            conn = aiohttp.TCPConnector(ssl=ctx)
+            async with aiohttp.ClientSession(connector=conn) as session:
+                return await check_available(session, username)
+
+        return asyncio.run(_run())
+    except Exception:
+        return True  # assume free on error — don't block purchase
 
 
 @app.route("/")
@@ -35,6 +57,7 @@ def item(username):
     row = get_username(username)
     if not row:
         return jsonify({"error": "not found"}), 404
+    increment_view(username)
     return jsonify(row)
 
 
@@ -78,6 +101,13 @@ def invoice_link():
     if not item or item["is_sold"]:
         return jsonify({"error": "not_found"}), 404
 
+    # Live-verify the nick is still free before selling
+    if not _live_check(username):
+        remove_username(username)
+        return jsonify({"error": "taken", "msg": "Ник только что заняли — удалили из каталога"}), 409
+
+    update_verified_at(username)
+
     res = reserve(username, user_id)
     if not res["ok"]:
         return jsonify({"error": res["reason"], "minutes": res.get("minutes")}), 409
@@ -114,7 +144,7 @@ def capsule_invoice_link():
     resp = rq.post(
         f"https://api.telegram.org/bot{token}/createInvoiceLink",
         json={
-            "title":       f"🎰 {label}",
+            "title":       f"📦 {label}",
             "description": desc,
             "payload":     f"capsule:{tier}",
             "currency":    "XTR",
