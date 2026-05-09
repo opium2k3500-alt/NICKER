@@ -65,11 +65,14 @@ def categories():
     return jsonify({"categories": ["Все"] + cats})
 
 
+_OWNER_ID = 5968081460  # telegram user id of the shop owner
+
 @app.route("/api/check-admin")
 def check_admin():
     user_id  = request.args.get("user_id", type=int)
-    admin_id = int(os.getenv("ADMIN_ID", "0").strip())
-    return jsonify({"is_admin": user_id == admin_id and admin_id != 0})
+    env_str  = os.getenv("ADMIN_ID", "").strip()
+    admin_id = int(env_str) if env_str.isdigit() else _OWNER_ID
+    return jsonify({"is_admin": user_id is not None and user_id == admin_id})
 
 
 if __name__ == "__main__":
