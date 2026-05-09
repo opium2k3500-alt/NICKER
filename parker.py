@@ -17,8 +17,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-PARKER_SESSION = os.getenv("PARKER_SESSION", "")
-PARKER_API_ID  = int(os.getenv("PARKER_API_ID", "0"))
+PARKER_SESSION  = os.getenv("PARKER_SESSION", "")
+PARKER_API_ID   = int(os.getenv("PARKER_API_ID", "0") or "0")
 PARKER_API_HASH = os.getenv("PARKER_API_HASH", "")
 
 _client = None
