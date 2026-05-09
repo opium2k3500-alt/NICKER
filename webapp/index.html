@@ -526,7 +526,9 @@ function mask(u){
 }
 function minsAgo(isoStr){
   if(!isoStr) return null;
-  const diff = (Date.now() - new Date(isoStr).getTime()) / 60000;
+  const normalized = isoStr.replace(' ', 'T');
+  const diff = (Date.now() - new Date(normalized).getTime()) / 60000;
+  if(isNaN(diff) || diff < 0) return 'только что';
   if(diff < 1) return 'только что';
   if(diff < 60) return `${Math.floor(diff)} мин назад`;
   return `${Math.floor(diff/60)} ч назад`;

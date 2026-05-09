@@ -123,9 +123,10 @@ def add_username(username, price, category, readability, uniqueness, description
     try:
         cur.execute("""
             INSERT INTO usernames
-                (username, price, category, length, readability, uniqueness, description)
-            VALUES (?,?,?,?,?,?,?)
-        """, (username.lower(), price, category, len(username), readability, uniqueness, description))
+                (username, price, category, length, readability, uniqueness, description, verified_at)
+            VALUES (?,?,?,?,?,?,?,?)
+        """, (username.lower(), price, category, len(username), readability, uniqueness, description,
+              datetime.now().isoformat()))
         c.commit()
         added = True
     except sqlite3.IntegrityError:
