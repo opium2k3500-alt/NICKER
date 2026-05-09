@@ -155,6 +155,9 @@ async def handle_webapp_data(update, ctx):
 
 async def precheckout(update, ctx):
     q = update.pre_checkout_query
+    if q.invoice_payload.startswith("capsule:"):
+        await q.answer(ok=True)
+        return
     if not q.invoice_payload.startswith("buy:"):
         await q.answer(ok=False, error_message="Неверный запрос")
         return
@@ -169,14 +172,43 @@ async def precheckout(update, ctx):
 
 
 async def successful_payment(update, ctx):
-    payment  = update.message.successful_payment
-    username = payment.invoice_payload[4:]
-    user_id  = update.effective_user.id
-    stars    = payment.total_amount
+    payment = update.message.successful_payment
+    payload = payment.invoice_payload
+    user_id = update.effective_user.id
+    stars   = payment.total_amount
 
+    if payload.startswith("capsule:"):
+        tier = int(payload[8:])
+        from generator import generate_budget_nick
+        nick = generate_budget_nick(tier)
+
+        await update.message.reply_text(
+            f"🎰 <b>КАПСУЛА ОТКРЫТА!</b>\n"
+            f"{'─' * 28}\n"
+            f"Ник:    <tg-spoiler>@{nick}</tg-spoiler>\n"
+            f"Сумма:  <b>{stars} ⭐</b>\n"
+            f"Статус: ✅ Оплачено\n"
+            f"{'─' * 28}\n"
+            f"👆 Нажми на спойлер чтобы открыть ник",
+            parse_mode="HTML"
+        )
+        await update.message.reply_text(
+            f"🎉 Твой ник из капсулы:\n\n"
+            f"<code>{nick}</code>\n\n"
+            f"<b>Как установить:</b>\n"
+            f"1. Telegram → <b>Настройки</b>\n"
+            f"2. Имя → <b>Изменить</b> → Имя пользователя → <code>{nick}</code>\n"
+            f"3. Нажми <b>Готово ✓</b>\n\n"
+            f"⚠️ Ник может оказаться занятым — это риск капсулы.\n"
+            f"⚠️ <b>Возвраты не производятся.</b>",
+            parse_mode="HTML"
+        )
+        logger.info(f"CAPSULE({tier}) @{nick} to {user_id} for {stars}⭐")
+        return
+
+    username = payload[4:]
     mark_sold(username, user_id, stars)
 
-    # Чек — ник под спойлером (сюрприз)
     await update.message.reply_text(
         f"🧾 <b>ЧЕК ОБ ОПЛАТЕ</b>\n"
         f"{'─' * 28}\n"
@@ -188,15 +220,13 @@ async def successful_payment(update, ctx):
         f"<i>Сохрани это сообщение!</i>",
         parse_mode="HTML"
     )
-
-    # Ник отдельно — чтобы удобно скопировать
     await update.message.reply_text(
         f"🎉 Твой ник — нажми чтобы скопировать:\n\n"
         f"<code>{username}</code>\n\n"
         f"<b>Как установить прямо сейчас:</b>\n"
         f"1. Telegram → <b>Настройки</b>\n"
         f"2. Нажми на своё имя → <b>Изменить</b>\n"
-        f"3. Поле <b>Имя пользователя</b> → удали старый → вставь <code>{username}</code>\n"
+        f"3. Поле <b>Имя пользователя</b> → вставь <code>{username}</code>\n"
         f"4. Нажми <b>Готово ✓</b>\n\n"
         f"⚡ Действуй быстро — ник ждёт тебя!\n"
         f"⚠️ <b>Возвраты не производятся.</b>",

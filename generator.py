@@ -202,6 +202,34 @@ def _generate_local(count: int) -> list[dict]:
     return result
 
 
+# ── Генератор ников для капсул ───────────────
+
+def generate_budget_nick(tier: int) -> str:
+    """
+    Генерирует дешёвый ник для капсульных покупок.
+    tier=250 → 9-11 символов, много повторов.
+    tier=500 → 7-8 символов, меньше повторов.
+    Доступность НЕ проверяется — риск капсулы.
+    """
+    consonants = list("bcdfghjklmnpqrstvwxyz")
+    vowels     = list("aeiou")
+
+    if tier <= 250:
+        # Длинные и некрасивые
+        pats = ["CVCCVCCVCD", "CVCVCVCVCC", "CVCCVCVCVC", "CVCCVCVCCV"]
+    else:
+        # Чуть получше
+        pats = ["CVCVCVC", "CVCCVCV", "CVCVCVD", "CVCCVCC", "CVCVCCV"]
+
+    pattern = random.choice(pats)
+    u = ""
+    for ch in pattern:
+        if ch == "C": u += random.choice(consonants)
+        elif ch == "V": u += random.choice(vowels)
+        elif ch == "D": u += str(random.randint(2, 9))
+    return u
+
+
 # ── Проверка доступности ─────────────────────
 
 async def check_telegram(session: aiohttp.ClientSession, username: str) -> bool:

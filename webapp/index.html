@@ -182,6 +182,21 @@
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
   .mine-tx{font-size:11px;color:var(--t2);line-height:1.4}
   .mine-tx b{color:var(--acc2)}
+
+  /* CAPSULES */
+  .caps-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+  .cap-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r2);padding:18px 14px;cursor:pointer;transition:transform .15s,border-color .15s;text-align:center}
+  .cap-card:active{transform:scale(.96)}
+  .cap-card.t500{border-color:rgba(245,200,66,.25);background:linear-gradient(160deg,var(--s1),rgba(245,200,66,.04))}
+  .cap-tier{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--t3);margin-bottom:8px;font-weight:600}
+  .cap-emoji{font-size:36px;margin-bottom:8px}
+  .cap-price{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--gold);margin-bottom:6px}
+  .cap-ps{font-size:11px;color:var(--t3);margin-bottom:14px;line-height:1.5}
+  .cap-btn{width:100%;padding:11px;background:linear-gradient(135deg,var(--acc),#9b85ff);border:none;border-radius:var(--r);color:#fff;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s}
+  .cap-btn.gold{background:linear-gradient(135deg,#c0a030,#e8c840)}
+  .cap-btn:active{transform:scale(.96);opacity:.9}
+  .cap-btn:disabled{opacity:.5;cursor:not-allowed}
+  .cap-warn{background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.18);border-radius:var(--r);padding:12px 14px;font-size:11px;color:var(--red);line-height:1.5;text-align:center}
 </style>
 </head>
 <body>
@@ -280,6 +295,30 @@
   </div>
 </div>
 
+<div id="scCapsule" class="sc-wrap">
+  <div class="pg">
+    <div class="ptit">🎰 Капсулы</div>
+    <div class="psub">Купи случайный ник — откроется только после оплаты. Чем дороже, тем лучше ник.</div>
+    <div class="caps-grid">
+      <div class="cap-card" onclick="buyCapsule(250)">
+        <div class="cap-tier">БАЗОВАЯ</div>
+        <div class="cap-emoji">🎰</div>
+        <div class="cap-price">250 ⭐</div>
+        <div class="cap-ps">9–11 символов<br>Много повторов<br>Это лотерея</div>
+        <button class="cap-btn" id="capBtn250">Открыть</button>
+      </div>
+      <div class="cap-card t500" onclick="buyCapsule(500)">
+        <div class="cap-tier">СТАНДАРТ</div>
+        <div class="cap-emoji">📦</div>
+        <div class="cap-price">500 ⭐</div>
+        <div class="cap-ps">7–8 символов<br>Меньше повторов<br>Чуть получше</div>
+        <button class="cap-btn gold" id="capBtn500">Открыть</button>
+      </div>
+    </div>
+    <div class="cap-warn">⚠️ Капсулы — это лотерея. Ник может оказаться занятым кем-то другим. Возвраты не производятся.</div>
+  </div>
+</div>
+
 <!-- NAV -->
 <div class="nav">
   <div class="ni on" id="navC" onclick="showScreen('catalog')">
@@ -288,8 +327,8 @@
   <div class="ni" id="navW" onclick="showScreen('watch')">
     <span class="nic">⭐</span><span>Вотчлист</span>
   </div>
-  <div class="ni" id="navP" onclick="showToast('Профиль скоро!')">
-    <span class="nic">👤</span><span>Профиль</span>
+  <div class="ni" id="navCap" onclick="showScreen('capsule')">
+    <span class="nic">🎰</span><span>Капсулы</span>
   </div>
 </div>
 
@@ -458,21 +497,58 @@ function closeMoDirect(){ document.getElementById('mo').classList.remove('open')
 
 async function doBuy(){
   if(!cur) return;
+  const btn = document.querySelector('.bbf');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Создаём счёт...'; }
+
   try{
-    const r=await fetch(`${API}/reserve`,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({username:cur.username,user_id:USER_ID})});
-    const d=await r.json();
-    if(!d.ok){
-      showToast(d.reason==='reserved'?`⏳ Зарезервирован ещё ${d.minutes} мин`:'❌ Недоступен');
+    const r = await fetch(`${API}/invoice-link?username=${encodeURIComponent(cur.username)}&user_id=${USER_ID}`);
+    const d = await r.json();
+    if(d.error){
+      const msg = d.error==='reserved' ? `⏳ Зарезервирован ещё ${d.minutes} мин`
+                : d.error==='not_found' ? '❌ Ник уже недоступен'
+                : '❌ Ошибка. Попробуй позже.';
+      showToast(msg);
+      if(btn){ btn.disabled=false; btn.textContent=`🎁 Купить сюрприз за ${fmt(cur.price)} ⭐`; }
       return;
     }
-  }catch{/* офлайн — продолжаем */}
-  if(tg){
-    tg.sendData(JSON.stringify({action:'buy',username:cur.username,stars:cur.price}));
-    closeMoDirect();
-  } else {
-    showToast(`✓ Запрос на @${cur.username} отправлен!`);
-    closeMoDirect();
+    if(tg && tg.openInvoice){
+      closeMoDirect();
+      tg.openInvoice(d.url, status => {
+        if(status==='paid') showToast('✅ Оплачено! Проверь чат с ботом.');
+        else if(status==='failed') showToast('❌ Оплата не прошла');
+      });
+    } else {
+      // fallback: open in browser tab
+      window.open(d.url, '_blank');
+      closeMoDirect();
+    }
+  }catch(e){
+    showToast('❌ Нет соединения');
+    if(btn){ btn.disabled=false; btn.textContent=`🎁 Купить сюрприз за ${fmt(cur.price)} ⭐`; }
+  }
+}
+
+async function buyCapsule(tier){
+  if(!tg && !USER_ID){ showToast('Открой через Telegram'); return; }
+  const btn = document.getElementById(`capBtn${tier}`);
+  if(btn){ btn.disabled=true; btn.textContent='⏳...'; }
+
+  try{
+    const r = await fetch(`${API}/capsule-invoice-link?tier=${tier}&user_id=${USER_ID}`);
+    const d = await r.json();
+    if(d.error){ showToast('❌ Ошибка. Попробуй позже.'); }
+    else if(tg && tg.openInvoice){
+      tg.openInvoice(d.url, status => {
+        if(status==='paid') showToast('🎰 Капсула куплена! Проверь чат с ботом.');
+        else if(status==='failed') showToast('❌ Оплата отменена');
+      });
+    } else {
+      window.open(d.url, '_blank');
+    }
+  }catch{
+    showToast('❌ Нет соединения');
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent=tier===250?'Открыть':'Открыть'; }
   }
 }
 
@@ -569,6 +645,9 @@ function showScreen(name){
     document.getElementById('scWatch').classList.add('on');
     document.getElementById('navW').classList.add('on');
     showWatchScreen();
+  } else if(name==='capsule'){
+    document.getElementById('scCapsule').classList.add('on');
+    document.getElementById('navCap').classList.add('on');
   }
 }
 
