@@ -6,6 +6,7 @@ generator.py
 
 import asyncio
 import aiohttp
+import ssl
 import logging
 import re
 import json
@@ -195,7 +196,7 @@ def _generate_local(count: int) -> list[dict]:
 # ── Проверка доступности ─────────────────────
 
 async def check_telegram(session: aiohttp.ClientSession, username: str) -> bool:
-    """True если ник свободен на Telegram (нет профиля/канала/группы)."""
+    """True если ник свободен на Telegram."""
     try:
         async with session.get(
             f"https://t.me/{username}",
@@ -203,19 +204,23 @@ async def check_telegram(session: aiohttp.ClientSession, username: str) -> bool:
             allow_redirects=True,
             headers=HEADERS_TG
         ) as resp:
-            if "telegram.org" in str(resp.url):
-                return True
             html = await resp.text()
-            has_profile = bool(re.search(
-                r'<meta property="og:title" content=".{3,}"', html, re.I
-            ))
-            return not has_profile
+            # Свободный ник: og:title = "Telegram: Contact @xxx" или нет профиля
+            # Занятый: og:title = реальное имя пользователя/канала
+            title_m = re.search(r'<meta property="og:title" content="([^"]+)"', html, re.I)
+            if not title_m:
+                return True
+            title = title_m.group(1)
+            # Свободен если title содержит "Telegram: Contact" (страница-заглушка)
+            if re.search(r'Telegram:\s*(Contact|Join)', title, re.I):
+                return True
+            return False
     except Exception:
         return False
 
 
 async def check_fragment(session: aiohttp.ClientSession, username: str) -> bool:
-    """True если ник есть на Fragment (занят/продаётся за TON — не подходит)."""
+    """True если ник реально выставлен на Fragment (не редирект на поиск)."""
     try:
         async with session.get(
             f"https://fragment.com/username/{username}",
@@ -223,15 +228,15 @@ async def check_fragment(session: aiohttp.ClientSession, username: str) -> bool:
             allow_redirects=True,
             headers=HEADERS_TG
         ) as resp:
+            final_url = str(resp.url)
+            # Если редиректнуло на поиск — ника нет на Fragment
+            if "query=" in final_url or final_url.rstrip("/") == "https://fragment.com":
+                return False
             if resp.status == 404:
                 return False
             html = await resp.text()
-            # Ник на Fragment — занят
-            on_fragment = bool(re.search(
-                r'(Bid|Buy|Place a bid|floor price|TON|auction|username-not-found)',
-                html, re.I
-            ))
-            return on_fragment
+            # Ник реально на Fragment если есть цена в TON
+            return bool(re.search(r'(\d+[\.,]\d+\s*TON|Place a Bid|Buy Now)', html, re.I))
     except Exception:
         return False
 
@@ -245,12 +250,20 @@ async def check_available(session: aiohttp.ClientSession, username: str) -> bool
     return tg_free and not frag_taken
 
 
+def _make_connector():
+    """Коннектор без строгой проверки SSL (нужно для macOS и некоторых серверов)."""
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    return aiohttp.TCPConnector(ssl=ctx)
+
+
 async def check_batch(usernames: list[str]) -> dict[str, bool]:
     """Проверяет список ников параллельно, возвращает {username: is_free}."""
     sem = asyncio.Semaphore(CHECK_CONCURRENCY)
     results = {}
 
-    async with aiohttp.ClientSession(headers=HEADERS_TG) as session:
+    async with aiohttp.ClientSession(connector=_make_connector(), headers=HEADERS_TG) as session:
         async def check_one(u):
             async with sem:
                 free = await check_available(session, u)
