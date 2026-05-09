@@ -74,6 +74,18 @@ def init_db():
         )
     """)
 
+    # Сессии рулетки
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS roulette_sessions (
+            session_id   TEXT PRIMARY KEY,
+            user_id      INTEGER NOT NULL,
+            won_username TEXT,
+            stars_paid   INTEGER,
+            paid         INTEGER DEFAULT 0,
+            created_at   TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
     c.commit()
     c.close()
     logger.info("DB ready")
@@ -320,3 +332,38 @@ def watch_get_subscribers(username: str) -> list[int]:
 def notify_watchlist(username: str) -> list[int]:
     """Возвращает список user_id которых надо уведомить о появлении ника."""
     return watch_get_subscribers(username)
+
+
+# ── Рулетка ──────────────────────────────────
+
+def roulette_create_session(user_id: int) -> str:
+    import uuid
+    sid = uuid.uuid4().hex[:10]
+    c = db()
+    c.execute("INSERT INTO roulette_sessions (session_id, user_id) VALUES (?,?)", (sid, user_id))
+    c.commit(); c.close()
+    return sid
+
+
+def roulette_complete(session_id: str, user_id: int, stars: int, won_username):
+    c = db()
+    c.execute("""
+        UPDATE roulette_sessions SET paid=1, won_username=?, stars_paid=?
+        WHERE session_id=? AND user_id=?
+    """, (won_username, stars, session_id, user_id))
+    c.commit(); c.close()
+
+
+def roulette_get_result(session_id: str, user_id: int):
+    c = db()
+    cur = c.cursor()
+    cur.execute("""
+        SELECT paid, won_username FROM roulette_sessions
+        WHERE session_id=? AND user_id=?
+    """, (session_id, user_id))
+    row = cur.fetchone()
+    c.close()
+    if not row:
+        return None
+    return {"paid": bool(row["paid"]), "won": row["won_username"] is not None,
+            "username": row["won_username"]}

@@ -4,7 +4,8 @@ from dotenv import load_dotenv
 from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 from database import (init_db, get_catalog, get_username, get_stats,
-                      reserve, check_reservation, watch_add, upsert_user)
+                      reserve, check_reservation, watch_add, upsert_user,
+                      roulette_create_session, roulette_get_result)
 
 load_dotenv()
 app = Flask(__name__)
@@ -82,14 +83,15 @@ def invoice_link():
         return jsonify({"error": res["reason"], "minutes": res.get("minutes")}), 409
 
     token = os.getenv("BOT_TOKEN", "")
+    masked = username[0] + '✦' * (len(username) - 1)
     resp = rq.post(
         f"https://api.telegram.org/bot{token}/createInvoiceLink",
         json={
-            "title":       f"Ник @{username}",
-            "description": f"{item['category']} · {item['length']} символов",
+            "title":       f"🎁 Ник @{masked}",
+            "description": f"{item['category']} · {item['length']} символов · Ник раскроется после оплаты",
             "payload":     f"buy:{username}",
             "currency":    "XTR",
-            "prices":      [{"label": f"@{username}", "amount": item["price"]}],
+            "prices":      [{"label": f"Ник @{masked}", "amount": item["price"]}],
         },
         timeout=10,
     )
@@ -124,6 +126,40 @@ def capsule_invoice_link():
     if data.get("ok"):
         return jsonify({"url": data["result"]})
     return jsonify({"error": "tg_error", "detail": str(data)}), 500
+
+
+@app.route("/api/roulette-invoice-link")
+def roulette_invoice_link():
+    user_id = request.args.get("user_id", type=int)
+    if not user_id:
+        return jsonify({"error": "missing"}), 400
+    session_id = roulette_create_session(user_id)
+    token = os.getenv("BOT_TOKEN", "")
+    resp = rq.post(
+        f"https://api.telegram.org/bot{token}/createInvoiceLink",
+        json={
+            "title":       "🎰 Рулетка НИКЕР",
+            "description": "Шанс 1/30 выиграть лучший ник из каталога",
+            "payload":     f"roulette:{session_id}",
+            "currency":    "XTR",
+            "prices":      [{"label": "Прокрут рулетки", "amount": 500}],
+        },
+        timeout=10,
+    )
+    data = resp.json()
+    if data.get("ok"):
+        return jsonify({"url": data["result"], "session_id": session_id})
+    return jsonify({"error": "tg_error", "detail": str(data)}), 500
+
+
+@app.route("/api/roulette-result")
+def roulette_result_api():
+    session_id = request.args.get("session_id", "")
+    user_id    = request.args.get("user_id", type=int)
+    result = roulette_get_result(session_id, user_id)
+    if not result:
+        return jsonify({"error": "not_found"}), 404
+    return jsonify(result)
 
 
 _OWNER_ID = 5968081460  # telegram user id of the shop owner

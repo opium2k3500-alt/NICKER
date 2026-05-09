@@ -10,7 +10,8 @@ from telegram.ext import (Application, CommandHandler, CallbackQueryHandler,
 from database import (init_db, upsert_user, get_catalog, get_username,
                       get_user_purchases, get_stats, mark_sold,
                       reserve, check_reservation,
-                      watch_add, watch_remove, watch_list)
+                      watch_add, watch_remove, watch_list,
+                      roulette_complete)
 from worker import Worker
 
 load_dotenv()
@@ -155,7 +156,7 @@ async def handle_webapp_data(update, ctx):
 
 async def precheckout(update, ctx):
     q = update.pre_checkout_query
-    if q.invoice_payload.startswith("capsule:"):
+    if q.invoice_payload.startswith(("capsule:", "roulette:")):
         await q.answer(ok=True)
         return
     if not q.invoice_payload.startswith("buy:"):
@@ -176,6 +177,49 @@ async def successful_payment(update, ctx):
     payload = payment.invoice_payload
     user_id = update.effective_user.id
     stars   = payment.total_amount
+
+    if payload.startswith("roulette:"):
+        import random
+        session_id = payload[9:]
+        catalog = get_catalog(sort="price_desc")
+        won = bool(catalog) and (random.randint(1, 30) == 1)
+        won_username = None
+
+        if won:
+            won_username = catalog[0]["username"]
+            mark_sold(won_username, user_id, stars)
+
+        roulette_complete(session_id, user_id, stars, won_username)
+
+        if won and won_username:
+            await update.message.reply_text(
+                f"🔥🔥🔥 <b>МЕГА ВЫИГРЫШ!</b> 🔥🔥🔥\n\n"
+                f"Ты выиграл из 30 участников!\n\n"
+                f"Ник: <tg-spoiler>@{won_username}</tg-spoiler>\n\n"
+                f"👆 Нажми на спойлер чтобы открыть!",
+                parse_mode="HTML"
+            )
+            await update.message.reply_text(
+                f"🏆 Твой выигрышный ник:\n\n"
+                f"<code>{won_username}</code>\n\n"
+                f"<b>Как установить:</b>\n"
+                f"1. Telegram → <b>Настройки</b>\n"
+                f"2. Имя → <b>Изменить</b> → Имя пользователя → <code>{won_username}</code>\n"
+                f"3. Нажми <b>Готово ✓</b>\n\n"
+                f"⚡ Действуй быстро!\n"
+                f"⚠️ <b>Возвраты не производятся.</b>",
+                parse_mode="HTML"
+            )
+            logger.info(f"ROULETTE WIN @{won_username} to {user_id}")
+        else:
+            await update.message.reply_text(
+                f"😔 <b>Не повезло!</b>\n\n"
+                f"Шанс победы 1/30 — попробуй ещё раз!\n\n"
+                f"🎰 Удача на следующем прокруте!",
+                parse_mode="HTML"
+            )
+            logger.info(f"ROULETTE LOSE {user_id}")
+        return
 
     if payload.startswith("capsule:"):
         tier = int(payload[8:])

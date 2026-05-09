@@ -183,6 +183,56 @@
   .mine-tx{font-size:11px;color:var(--t2);line-height:1.4}
   .mine-tx b{color:var(--acc2)}
 
+  /* ROULETTE */
+  .roulette-wrap{padding:0 16px 100px}
+  .roulette-title{text-align:center;margin:18px 0 4px}
+  .roulette-title h2{font-size:22px;font-weight:800}
+  .roulette-title p{font-size:12px;color:var(--t3);margin-top:4px}
+  .reel-outer{position:relative;height:110px;overflow:hidden;border-radius:16px;border:2px solid rgba(124,106,247,.35);background:var(--s2);margin:18px 0}
+  .reel-outer::before,.reel-outer::after{content:'';position:absolute;top:0;bottom:0;width:70px;z-index:3;pointer-events:none}
+  .reel-outer::before{left:0;background:linear-gradient(to right,var(--s2) 20%,transparent)}
+  .reel-outer::after{right:0;background:linear-gradient(to left,var(--s2) 20%,transparent)}
+  .reel-needle{position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);width:3px;background:linear-gradient(180deg,transparent,var(--acc),transparent);z-index:4;pointer-events:none}
+  .reel-needle::before,.reel-needle::after{content:'';position:absolute;left:50%;transform:translateX(-50%);width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent}
+  .reel-needle::before{top:0;border-bottom:10px solid var(--acc)}
+  .reel-needle::after{bottom:0;border-top:10px solid var(--acc)}
+  .reel-track{display:flex;will-change:transform;transform:translateX(0)}
+  .reel-item{flex-shrink:0;width:110px;height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border-right:1px solid rgba(255,255,255,.04);transition:none}
+  .reel-item.win{background:linear-gradient(135deg,rgba(245,200,66,.18),rgba(255,120,0,.1))}
+  .ri-ic{font-size:32px;line-height:1}
+  .ri-tx{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--t3)}
+  .reel-item.win .ri-tx{color:var(--gold)}
+  .reel-item.win .ri-ic{animation:none}
+  .reel-odds{display:flex;gap:10px;justify-content:center;margin-bottom:16px}
+  .odds-item{background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:8px 14px;text-align:center}
+  .odds-pct{font-size:18px;font-weight:700;font-family:'JetBrains Mono',monospace}
+  .odds-lbl{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+  .btn-spin{width:100%;padding:16px;background:linear-gradient(135deg,#c0a030,#f5c842,#c0a030);border:none;border-radius:var(--r2);color:#1a1000;font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;cursor:pointer;transition:all .15s;letter-spacing:.3px;box-shadow:0 4px 24px rgba(245,200,66,.25);margin-bottom:12px}
+  .btn-spin:active{transform:scale(.97)}
+  .btn-spin:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
+  .roulette-note{font-size:10px;color:var(--t3);text-align:center;line-height:1.5}
+
+  /* WIN OVERLAY */
+  .win-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:600;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px}
+  .win-overlay.show{display:flex}
+  .win-fire{font-size:52px;animation:winBounce .5s infinite alternate}
+  @keyframes winBounce{0%{transform:scale(1) rotate(-5deg)}100%{transform:scale(1.15) rotate(5deg)}}
+  .win-title{font-size:34px;font-weight:900;color:var(--gold);text-shadow:0 0 30px rgba(245,200,66,.7),0 0 60px rgba(255,80,0,.4);text-align:center;line-height:1.2;animation:winPulse .7s infinite alternate}
+  @keyframes winPulse{0%{transform:scale(1)}100%{transform:scale(1.06)}}
+  .win-sub{font-size:14px;color:var(--t2);text-align:center}
+  .win-close{margin-top:8px;padding:13px 32px;background:linear-gradient(135deg,var(--acc),#9b85ff);border:none;border-radius:var(--r2);color:#fff;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;cursor:pointer}
+  .fire-particle{position:fixed;font-size:22px;pointer-events:none;z-index:601;animation:fireUp 1.2s ease-out forwards}
+  @keyframes fireUp{0%{opacity:1;transform:translateY(0) scale(1) rotate(0deg)}100%{opacity:0;transform:translateY(-180px) scale(.4) rotate(var(--r))}}
+
+  /* LOSE OVERLAY */
+  .lose-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:600;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px}
+  .lose-overlay.show{display:flex}
+  .lose-icon{font-size:56px;animation:loseShake .4s ease 3}
+  @keyframes loseShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+  .lose-title{font-size:26px;font-weight:800;color:var(--t2);text-align:center}
+  .lose-sub{font-size:13px;color:var(--t3);text-align:center;line-height:1.5}
+  .lose-close{margin-top:8px;padding:13px 32px;background:var(--s2);border:1px solid var(--b1);border-radius:var(--r2);color:var(--t2);font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;cursor:pointer}
+
   /* CAPSULES */
   .caps-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
   .cap-card{background:var(--s1);border:1px solid var(--b1);border-radius:var(--r2);padding:18px 14px;cursor:pointer;transition:transform .15s,border-color .15s;text-align:center}
@@ -295,6 +345,51 @@
   </div>
 </div>
 
+<!-- ROULETTE SCREEN -->
+<div id="scRoulette" class="sc-wrap">
+  <div class="roulette-wrap">
+    <div class="roulette-title">
+      <h2>🎰 Рулетка</h2>
+      <p>Крутани и выиграй лучший ник из каталога</p>
+    </div>
+
+    <div class="reel-outer" id="reelOuter">
+      <div class="reel-needle"></div>
+      <div class="reel-track" id="reelTrack"></div>
+    </div>
+
+    <div class="reel-odds">
+      <div class="odds-item">
+        <div class="odds-pct" style="color:var(--red)">29/30</div>
+        <div class="odds-lbl">Ничего</div>
+      </div>
+      <div class="odds-item">
+        <div class="odds-pct" style="color:var(--gold)">1/30</div>
+        <div class="odds-lbl">Лучший ник</div>
+      </div>
+    </div>
+
+    <button class="btn-spin" id="btnSpin" onclick="startSpin()">🎰 Крутить за 500 ⭐</button>
+    <div class="roulette-note">⚠️ Выигрыш приходит в чат с ботом · Возвраты не производятся</div>
+  </div>
+</div>
+
+<!-- WIN OVERLAY -->
+<div class="win-overlay" id="winOverlay">
+  <div class="win-fire">🔥</div>
+  <div class="win-title">🏆 МЕГА ВИН! 🏆</div>
+  <div class="win-sub">Ник уже у тебя в чате с ботом!<br>Открой Telegram и проверь сообщения.</div>
+  <button class="win-close" onclick="closeOverlay('win')">🔥 Забрать выигрыш!</button>
+</div>
+
+<!-- LOSE OVERLAY -->
+<div class="lose-overlay" id="loseOverlay">
+  <div class="lose-icon">😔</div>
+  <div class="lose-title">Не повезло!</div>
+  <div class="lose-sub">Шанс победы 1/30.<br>Попробуй ещё раз — удача где-то рядом!</div>
+  <button class="lose-close" onclick="closeOverlay('lose')">Крутить снова</button>
+</div>
+
 <div id="scCapsule" class="sc-wrap">
   <div class="pg">
     <div class="ptit">🎰 Капсулы</div>
@@ -327,8 +422,11 @@
   <div class="ni" id="navW" onclick="showScreen('watch')">
     <span class="nic">⭐</span><span>Вотчлист</span>
   </div>
+  <div class="ni" id="navR" onclick="showScreen('roulette')">
+    <span class="nic">🎡</span><span>Рулетка</span>
+  </div>
   <div class="ni" id="navCap" onclick="showScreen('capsule')">
-    <span class="nic">🎰</span><span>Капсулы</span>
+    <span class="nic">📦</span><span>Капсулы</span>
   </div>
 </div>
 
@@ -645,9 +743,174 @@ function showScreen(name){
     document.getElementById('scWatch').classList.add('on');
     document.getElementById('navW').classList.add('on');
     showWatchScreen();
+  } else if(name==='roulette'){
+    document.getElementById('scRoulette').classList.add('on');
+    document.getElementById('navR').classList.add('on');
+    initReel();
   } else if(name==='capsule'){
     document.getElementById('scCapsule').classList.add('on');
     document.getElementById('navCap').classList.add('on');
+  }
+}
+
+// ── Roulette ──────────────────────────────────
+const ITEM_W = 110;
+const REEL_COUNT = 90;
+const WIN_IDX = 72;   // where the win item sits in strip
+const LOSE_IDX = 78;  // where reel stops for a loss
+
+let reelInited = false;
+let spinSession = null;
+let spinResult  = null;
+
+function initReel(){
+  if(reelInited) return;
+  reelInited = true;
+  const track = document.getElementById('reelTrack');
+  let html = '';
+  for(let i = 0; i < REEL_COUNT; i++){
+    const isWin = (i === WIN_IDX);
+    html += `<div class="reel-item ${isWin?'win':''}">
+      <div class="ri-ic">${isWin ? '🏆' : LOSE_ICONS[i % LOSE_ICONS.length]}</div>
+      <div class="ri-tx">${isWin ? 'ВЫИГРЫШ' : 'НИЧЕГО'}</div>
+    </div>`;
+  }
+  track.innerHTML = html;
+  resetReel();
+}
+
+const LOSE_ICONS = ['💨','🌑','❌','😶','🫧','⬛','🌫️','🕳️','💤'];
+
+function resetReel(){
+  const track = document.getElementById('reelTrack');
+  const outer = document.getElementById('reelOuter');
+  const center = outer.offsetWidth / 2 - ITEM_W / 2;
+  track.style.transition = 'none';
+  track.style.transform = `translateX(${center}px)`;
+}
+
+async function startSpin(){
+  const btn = document.getElementById('btnSpin');
+  if(!USER_ID){ showToast('Открой через Telegram'); return; }
+  btn.disabled = true;
+  btn.textContent = '⏳ Создаём счёт...';
+
+  try{
+    const r = await fetch(`${API}/roulette-invoice-link?user_id=${USER_ID}`);
+    const d = await r.json();
+    if(d.error){ showToast('❌ Ошибка. Попробуй позже.'); resetSpinBtn(); return; }
+
+    spinSession = d.session_id;
+    spinResult  = null;
+
+    if(tg && tg.openInvoice){
+      tg.openInvoice(d.url, async status => {
+        if(status === 'paid'){
+          btn.textContent = '🎰 Крутится...';
+          animateSpin();
+          spinResult = await pollRouletteResult(spinSession);
+        } else {
+          resetSpinBtn();
+        }
+      });
+    } else {
+      window.open(d.url, '_blank');
+      resetSpinBtn();
+    }
+  } catch {
+    showToast('❌ Нет соединения');
+    resetSpinBtn();
+  }
+}
+
+function resetSpinBtn(){
+  const btn = document.getElementById('btnSpin');
+  if(btn){ btn.disabled=false; btn.textContent='🎰 Крутить за 500 ⭐'; }
+}
+
+async function pollRouletteResult(session_id, max=20){
+  for(let i=0; i<max; i++){
+    await sleep(1000);
+    try{
+      const r = await fetch(`${API}/roulette-result?session_id=${session_id}&user_id=${USER_ID}`);
+      const d = await r.json();
+      if(d.paid) return d;
+    }catch{}
+  }
+  return null;
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+function animateSpin(){
+  const track = document.getElementById('reelTrack');
+  const outer = document.getElementById('reelOuter');
+  const center = outer.offsetWidth / 2 - ITEM_W / 2;
+  const stopIdx = LOSE_IDX; // always animate to lose position visually
+  const targetX = center - stopIdx * ITEM_W;
+
+  resetReel();
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      track.style.transition = 'transform 4.2s cubic-bezier(0.12,0.8,0.2,1)';
+      track.style.transform  = `translateX(${targetX}px)`;
+    });
+  });
+
+  // After animation ends, show result
+  setTimeout(()=>{ showSpinResult(); }, 4400);
+}
+
+async function showSpinResult(){
+  // If result not yet received, wait a bit more
+  if(!spinResult){
+    spinResult = await pollRouletteResult(spinSession, 5);
+  }
+
+  if(spinResult && spinResult.won){
+    // Snap reel to WIN position
+    const track = document.getElementById('reelTrack');
+    const outer = document.getElementById('reelOuter');
+    const center = outer.offsetWidth / 2 - ITEM_W / 2;
+    track.style.transition = 'transform 0.5s cubic-bezier(0.34,1.56,0.64,1)';
+    track.style.transform  = `translateX(${center - WIN_IDX * ITEM_W}px)`;
+    setTimeout(()=>{ showWinOverlay(); }, 600);
+  } else {
+    showLoseOverlay();
+  }
+  resetSpinBtn();
+}
+
+function showWinOverlay(){
+  spawnFireParticles();
+  tg?.HapticFeedback?.notificationOccurred('success');
+  document.getElementById('winOverlay').classList.add('show');
+}
+
+function showLoseOverlay(){
+  tg?.HapticFeedback?.notificationOccurred('error');
+  document.getElementById('loseOverlay').classList.add('show');
+}
+
+function closeOverlay(type){
+  document.getElementById(type==='win'?'winOverlay':'loseOverlay').classList.remove('show');
+  resetReel();
+}
+
+function spawnFireParticles(){
+  const emojis = ['🔥','🔥','🔥','💥','⭐','🏆','✨','🎉','🌟','💛'];
+  for(let i=0; i<30; i++){
+    setTimeout(()=>{
+      const el = document.createElement('div');
+      el.className = 'fire-particle';
+      el.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+      el.style.left = Math.random()*100+'vw';
+      el.style.top  = (40+Math.random()*50)+'vh';
+      el.style.setProperty('--r', (Math.random()*720-360)+'deg');
+      el.style.animationDelay = Math.random()*0.8+'s';
+      document.body.appendChild(el);
+      setTimeout(()=>el.remove(), 2000);
+    }, i*60);
   }
 }
 
