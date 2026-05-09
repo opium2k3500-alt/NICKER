@@ -65,6 +65,13 @@ def categories():
     return jsonify({"categories": ["Все"] + cats})
 
 
+@app.route("/api/check-admin")
+def check_admin():
+    user_id  = request.args.get("user_id", type=int)
+    admin_id = int(os.getenv("ADMIN_ID", "0"))
+    return jsonify({"is_admin": user_id == admin_id and admin_id != 0})
+
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
