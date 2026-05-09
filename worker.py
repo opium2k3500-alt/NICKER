@@ -27,6 +27,7 @@ class Worker:
         await asyncio.gather(
             self._loop_autofill(),
             self._loop_reservations(),
+            self._loop_catalog_monitor(),
         )
 
     def stop(self):
@@ -101,6 +102,40 @@ class Worker:
                     logger.info(f"Notified user {user_id} about @{username}")
                 except Exception as e:
                     logger.warning(f"Failed to notify {user_id}: {e}")
+
+    # ── Мониторинг каталога ──────────────────
+
+    async def _loop_catalog_monitor(self):
+        """Каждые 7 минут проверяет все ники в каталоге — не занял ли их кто-то."""
+        await asyncio.sleep(120)  # первая проверка через 2 минуты
+        while self.running:
+            try:
+                await self._check_existing_catalog()
+            except Exception as e:
+                logger.error(f"Catalog monitor error: {e}")
+            await asyncio.sleep(420)  # затем каждые 7 минут
+
+    async def _check_existing_catalog(self):
+        from database import get_catalog, remove_username
+        from generator import check_batch
+
+        catalog = get_catalog()
+        if not catalog:
+            return
+
+        usernames = [item["username"] for item in catalog]
+        logger.info(f"Monitoring {len(usernames)} catalog items...")
+
+        availability = await check_batch(usernames)
+        removed = 0
+        for username, is_free in availability.items():
+            if not is_free:
+                remove_username(username)
+                removed += 1
+                logger.info(f"Removed taken @{username} from catalog")
+
+        if removed:
+            logger.info(f"Catalog monitor: removed {removed} taken usernames")
 
     # ── Снятие резерваций ────────────────────
 

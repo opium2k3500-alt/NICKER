@@ -224,6 +224,14 @@ def reserve(username: str, user_id: int) -> dict:
     return {"ok": True, "until": until.strftime("%H:%M"), "minutes": RESERVE_MINUTES}
 
 
+def remove_username(username: str):
+    """Удаляет ник из каталога (занят или появился на Fragment)."""
+    c = db()
+    c.execute("DELETE FROM usernames WHERE username=? AND is_sold=0", (username.lower(),))
+    c.commit()
+    c.close()
+
+
 def release_expired():
     c = db()
     cur = c.cursor()
