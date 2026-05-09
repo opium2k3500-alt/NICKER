@@ -40,7 +40,11 @@
       "Read(//private/tmp/**)",
       "Bash(lsof -ti:8080)",
       "Bash(PORT=8080 python3 server.py)",
-      "Bash(pip3 install *)"
+      "Bash(pip3 install *)",
+      "Bash(pkill -9 -f \"python3\")",
+      "Bash(pkill -9 -f \"bot.py\")",
+      "Bash(> /tmp/nicker_bot.log)",
+      "Bash(echo \"PID: $!\")"
     ]
   }
 }
