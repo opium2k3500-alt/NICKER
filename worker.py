@@ -166,8 +166,15 @@ class Worker:
             await asyncio.sleep(45)
 
     async def _park_one(self):
+        import pathlib
         from database import get_unparked_catalog, set_parked
         from parker import park_nick
+
+        # Handle sync request if flagged by Flask admin
+        sync_flag = pathlib.Path("/tmp/parker_sync_requested")
+        if sync_flag.exists():
+            sync_flag.unlink(missing_ok=True)
+            await self._sync_channels()
 
         pending = get_unparked_catalog()
         if not pending:
@@ -177,6 +184,49 @@ class Worker:
         channel_id = await park_nick(username)
         if channel_id:
             set_parked(username, channel_id)
+
+    async def _sync_channels(self):
+        from parker import get_client
+        from database import get_username, add_username, set_parked
+        from generator import calc_price
+        from pyrogram.enums import ChatType
+
+        client = await get_client()
+        if not client:
+            return
+
+        named = []
+        try:
+            async for dialog in client.get_dialogs():
+                chat = dialog.chat
+                if chat.type not in (ChatType.CHANNEL, ChatType.SUPERGROUP):
+                    continue
+                if chat.username:
+                    named.append({"username": chat.username.lower(), "id": chat.id})
+                else:
+                    try:
+                        await client.delete_channel(chat.id)
+                        logger.info(f"Sync: deleted orphan channel {chat.id}")
+                    except Exception:
+                        pass
+        except Exception as e:
+            logger.error(f"Sync channels error: {e}")
+            return
+
+        synced = added = 0
+        for ch in named:
+            uname = ch["username"]
+            item = get_username(uname)
+            if item:
+                if not item.get("is_parked"):
+                    set_parked(uname, ch["id"])
+                    synced += 1
+            else:
+                price = calc_price(uname, 9, 9)
+                if add_username(uname, price, "Премиум", 9, 9, "восстановлен при синхронизации"):
+                    set_parked(uname, ch["id"])
+                    added += 1
+        logger.info(f"Sync done: {synced} synced, {added} restored, {len(named)} total channels")
 
     # ── Снятие резерваций ────────────────────
 

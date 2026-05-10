@@ -779,7 +779,8 @@ async function adminSyncParked(){
     });
     const d = await r.json();
     if(d.ok){
-      showToast(`✅ ${d.synced} обновлено, ${d.added_back} восстановлено, ${d.orphans_deleted} orphan удалено`);
+      showToast('⏳ Синхронизация запущена — обновится через ~45 сек');
+      setTimeout(load, 50000);
       load();
     } else {
       showToast(d.error === 'parker_not_configured' ? '❌ Паркер не настроен' : '❌ Ошибка');
@@ -836,9 +837,9 @@ async function adminPark(username){
     });
     const d = await r.json();
     if(d.ok){
-      showToast('🔒 Запаркован!');
+      showToast('⏳ Поставлен в очередь — запаркуется через ~45 сек');
       closeMoDirect();
-      load();
+      setTimeout(load, 50000);
     } else {
       const msgs = {parker_not_configured:'❌ Паркер не настроен', already_parked:'Уже запаркован', park_failed:'❌ Не удалось — ник занят?'};
       showToast(msgs[d.error] || '❌ Ошибка');

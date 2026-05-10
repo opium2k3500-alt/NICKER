@@ -259,18 +259,19 @@ def admin_sync_parked():
     if user_id != admin_id:
         return jsonify({"error": "forbidden"}), 403
 
-    from parker import sync_channels_oneshot, is_configured as parker_ok
+    from parker import is_configured as parker_ok
     from database import get_username, add_username, set_parked
     from generator import calc_price
 
     if not parker_ok():
         return jsonify({"error": "parker_not_configured"}), 503
 
-    try:
-        channels, orphans_deleted = asyncio.run(sync_channels_oneshot())
-    except Exception as e:
-        logger.error(f"Sync error: {e}")
-        return jsonify({"error": str(e)}), 500
+    # Write sync request flag — worker picks it up
+    import pathlib
+    pathlib.Path("/tmp/parker_sync_requested").touch()
+
+    channels       = []
+    orphans_deleted = 0
     synced = 0
     added  = 0
     for ch in channels:
@@ -287,8 +288,7 @@ def admin_sync_parked():
                 set_parked(uname, ch["id"])
                 added += 1
 
-    return jsonify({"ok": True, "synced": synced, "added_back": added,
-                    "total_channels": len(channels), "orphans_deleted": orphans_deleted})
+    return jsonify({"ok": True, "queued": True, "msg": "Синхронизация запущена — займёт ~30 сек"})
 
 
 @app.route("/api/admin/park", methods=["POST"])
@@ -308,21 +308,13 @@ def admin_park():
     if item.get("is_parked"):
         return jsonify({"error": "already_parked"}), 400
 
-    from parker import park_nick_oneshot, is_configured as parker_ok
-    from database import set_parked
+    from parker import is_configured as parker_ok
+    from database import set_park_priority
     if not parker_ok():
         return jsonify({"error": "parker_not_configured"}), 503
 
-    try:
-        cid = asyncio.run(park_nick_oneshot(username))
-    except Exception as e:
-        logger.error(f"Admin park error: {e}")
-        return jsonify({"error": str(e)}), 500
-
-    if cid:
-        set_parked(username, cid)
-        return jsonify({"ok": True, "channel_id": cid})
-    return jsonify({"error": "park_failed"}), 500
+    set_park_priority(username)
+    return jsonify({"ok": True, "queued": True})
 
 
 @app.route("/api/check-admin")
