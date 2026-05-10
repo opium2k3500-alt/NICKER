@@ -60,6 +60,77 @@ async def get_client():
             return None
 
 
+async def _oneshot(coro_fn):
+    """Runs a coroutine with a fresh Pyrogram client — safe to call from Flask/asyncio.run()."""
+    if not is_configured():
+        return None
+    from pyrogram import Client
+    async with Client(
+        name="parker_oneshot",
+        api_id=PARKER_API_ID,
+        api_hash=PARKER_API_HASH,
+        session_string=PARKER_SESSION,
+        in_memory=True,
+        no_updates=True,
+    ) as client:
+        return await coro_fn(client)
+
+
+async def park_nick_oneshot(username: str) -> int | None:
+    """For use from Flask (asyncio.run). Creates its own client."""
+    async def _do(client):
+        bot_username = os.getenv("BOT_USERNAME", "findyuruser_bot").lstrip("@")
+        desc = f"Этот ник продаётся в магазине НИКЕР. @{bot_username}"
+        try:
+            from pyrogram.errors import FloodWait
+            existing = None
+            try:
+                existing = await client.get_chat(username)
+            except Exception:
+                pass
+            if existing and getattr(existing, 'username', '').lower() == username.lower():
+                logger.info(f"Parker oneshot: уже владеем @{username} → {existing.id}")
+                return existing.id
+            chat = await client.create_channel(title=f"@{username}", description=desc)
+            await asyncio.sleep(3)
+            await client.set_chat_username(chat.id, username)
+            logger.info(f"Parker oneshot: парковал @{username} → {chat.id}")
+            return chat.id
+        except Exception as e:
+            logger.warning(f"Parker oneshot error for @{username}: {e}")
+            return None
+    try:
+        return await _oneshot(_do)
+    except Exception as e:
+        logger.error(f"Parker oneshot failed: {e}")
+        return None
+
+
+async def sync_channels_oneshot() -> tuple[list, int]:
+    """For use from Flask. Returns (named_channels, orphans_deleted)."""
+    async def _do(client):
+        from pyrogram.enums import ChatType
+        named   = []
+        orphans = 0
+        async for dialog in client.get_dialogs():
+            try:
+                chat = dialog.chat
+                if chat.type not in (ChatType.CHANNEL, ChatType.SUPERGROUP):
+                    continue
+                if chat.username:
+                    named.append({"username": chat.username.lower(), "id": chat.id})
+                else:
+                    try:
+                        await client.delete_channel(chat.id)
+                        orphans += 1
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        return named, orphans
+    return await _oneshot(_do)
+
+
 async def park_nick(username: str) -> int | None:
     """
     Создаёт канал @username. Возвращает channel_id или None при ошибке.

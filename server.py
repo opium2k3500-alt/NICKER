@@ -259,44 +259,17 @@ def admin_sync_parked():
     if user_id != admin_id:
         return jsonify({"error": "forbidden"}), 403
 
-    from parker import get_client, is_configured as parker_ok
+    from parker import sync_channels_oneshot, is_configured as parker_ok
     from database import get_username, add_username, set_parked
     from generator import calc_price
 
     if not parker_ok():
         return jsonify({"error": "parker_not_configured"}), 503
 
-    async def _sync():
-        client = await get_client()
-        if not client:
-            return [], 0
-        named   = []
-        orphans = 0
-        try:
-            async for dialog in client.get_dialogs():
-                try:
-                    chat = dialog.chat
-                    from pyrogram.enums import ChatType
-                    if chat.type not in (ChatType.CHANNEL, ChatType.SUPERGROUP):
-                        continue
-                    if chat.username:
-                        named.append({"username": chat.username.lower(), "id": chat.id})
-                    else:
-                        try:
-                            await client.delete_channel(chat.id)
-                            orphans += 1
-                        except Exception:
-                            pass
-                except Exception as inner:
-                    logger.warning(f"Sync dialog error: {inner}")
-        except Exception as outer:
-            logger.error(f"Sync get_dialogs error: {outer}")
-        return named, orphans
-
     try:
-        channels, orphans_deleted = asyncio.run(_sync())
+        channels, orphans_deleted = asyncio.run(sync_channels_oneshot())
     except Exception as e:
-        logger.error(f"Sync asyncio.run error: {e}")
+        logger.error(f"Sync error: {e}")
         return jsonify({"error": str(e)}), 500
     synced = 0
     added  = 0
@@ -335,15 +308,17 @@ def admin_park():
     if item.get("is_parked"):
         return jsonify({"error": "already_parked"}), 400
 
-    from parker import park_nick, is_configured as parker_ok
+    from parker import park_nick_oneshot, is_configured as parker_ok
     from database import set_parked
     if not parker_ok():
         return jsonify({"error": "parker_not_configured"}), 503
 
-    async def _do():
-        return await park_nick(username)
+    try:
+        cid = asyncio.run(park_nick_oneshot(username))
+    except Exception as e:
+        logger.error(f"Admin park error: {e}")
+        return jsonify({"error": str(e)}), 500
 
-    cid = asyncio.run(_do())
     if cid:
         set_parked(username, cid)
         return jsonify({"ok": True, "channel_id": cid})
