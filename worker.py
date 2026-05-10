@@ -24,7 +24,8 @@ class Worker:
     async def start(self):
         self.running = True
         logger.info("Worker started")
-        from parker import is_configured as parker_ok
+        from parker import is_configured as parker_ok, PARKER_API_ID, PARKER_SESSION, PARKER_API_HASH
+        logger.info(f"Parker check: api_id={PARKER_API_ID} hash={'YES' if PARKER_API_HASH else 'NO'} session={'YES' if PARKER_SESSION else 'NO'} configured={parker_ok()}")
         tasks = [
             self._loop_autofill(),
             self._loop_reservations(),
