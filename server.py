@@ -248,6 +248,56 @@ def admin_add_nick():
     return jsonify({"ok": True, "price": price})
 
 
+@app.route("/api/admin/sync-parked", methods=["POST"])
+def admin_sync_parked():
+    """Reads all channels from Pyrogram and re-syncs parked status in DB."""
+    d       = request.json or {}
+    user_id = d.get("user_id")
+
+    env_str  = os.getenv("ADMIN_ID", "").strip()
+    admin_id = int(env_str) if env_str.isdigit() else _OWNER_ID
+    if user_id != admin_id:
+        return jsonify({"error": "forbidden"}), 403
+
+    from parker import get_client, is_configured as parker_ok
+    from database import get_username, add_username, set_parked
+    from generator import calc_price
+
+    if not parker_ok():
+        return jsonify({"error": "parker_not_configured"}), 503
+
+    async def _sync():
+        client = await get_client()
+        if not client:
+            return []
+        found = []
+        async for dialog in client.get_dialogs():
+            chat = dialog.chat
+            if chat.type.name in ("CHANNEL", "SUPERGROUP") and chat.username:
+                found.append({"username": chat.username.lower(), "id": chat.id})
+        return found
+
+    channels = asyncio.run(_sync())
+    synced = 0
+    added  = 0
+    for ch in channels:
+        uname = ch["username"]
+        item  = get_username(uname)
+        if item:
+            if not item.get("is_parked"):
+                set_parked(uname, ch["id"])
+                synced += 1
+        else:
+            # Nick was removed from catalog — re-add it
+            price = calc_price(uname, 9, 9)
+            ok = add_username(uname, price, "Премиум", 9, 9, "восстановлен при синхронизации")
+            if ok:
+                set_parked(uname, ch["id"])
+                added += 1
+
+    return jsonify({"ok": True, "synced": synced, "added_back": added, "total_channels": len(channels)})
+
+
 @app.route("/api/admin/park", methods=["POST"])
 def admin_park():
     d        = request.json or {}

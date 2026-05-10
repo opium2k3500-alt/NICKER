@@ -336,7 +336,10 @@
 <div id="scCatalog" class="sc-wrap on">
   <div id="adminPanel" style="display:none;padding:10px 10px 0">
     <div style="background:rgba(124,106,247,.08);border:1px solid rgba(124,106,247,.25);border-radius:14px;padding:12px 14px">
-      <div style="font-size:11px;color:var(--acc2);font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">👑 Панель администратора</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:11px;color:var(--acc2);font-weight:700;text-transform:uppercase;letter-spacing:.5px">👑 Панель администратора</div>
+        <button onclick="adminSyncParked()" style="padding:4px 10px;background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);border-radius:7px;color:var(--green);font-size:11px;font-weight:600;cursor:pointer">🔄 Синхронизировать каналы</button>
+      </div>
       <div style="display:flex;gap:8px">
         <div style="position:relative;flex:1">
           <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--acc2);font-weight:600">@</span>
@@ -765,6 +768,23 @@ function setParked(v,el){
   flt.parked=v;
   document.querySelectorAll('.chip[onclick*="setParked"]').forEach(c=>c.classList.remove('on'));
   el.classList.add('on'); render();
+}
+
+async function adminSyncParked(){
+  showToast('⏳ Синхронизирую каналы...');
+  try{
+    const r = await fetch(`${API}/admin/sync-parked`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({user_id: USER_ID})
+    });
+    const d = await r.json();
+    if(d.ok){
+      showToast(`✅ Синхронизировано: ${d.synced} обновлено, ${d.added_back} восстановлено из ${d.total_channels} каналов`);
+      load();
+    } else {
+      showToast(d.error === 'parker_not_configured' ? '❌ Паркер не настроен' : '❌ Ошибка');
+    }
+  }catch(e){ showToast('❌ Нет соединения'); }
 }
 
 async function adminAddNick(){
