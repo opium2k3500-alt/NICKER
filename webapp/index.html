@@ -597,6 +597,7 @@ function openMo(it){
     </div>
     ${res?`<div class="res-warn" style="display:block">⏳ Зарезервирован — доступен через ~${getResTime(it)} мин</div>`:''}
     <div class="cn">✓ Комиссия Telegram 30% включена · После оплаты ник придёт спойлером</div>
+    ${IS_ADMIN && !it.is_parked ? `<button class="bwf" id="btnAdminPark" onclick="adminPark('${it.username}')">🔒 Запарковать вручную</button>` : ''}
     ${res
       ? `<button class="bwf" onclick="watchAndClose()">🔔 Уведомить когда освободится</button>`
       : `<button class="bbf" onclick="doBuy()">🎁 Купить сюрприз за ${fmt(it.price)} ⭐</button>
@@ -745,6 +746,31 @@ function setParked(v,el){
   flt.parked=v;
   document.querySelectorAll('.chip[onclick*="setParked"]').forEach(c=>c.classList.remove('on'));
   el.classList.add('on'); render();
+}
+
+async function adminPark(username){
+  const btn = document.getElementById('btnAdminPark');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Паркую...'; }
+  try{
+    const r = await fetch(`${API}/admin/park`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({user_id: USER_ID, username})
+    });
+    const d = await r.json();
+    if(d.ok){
+      showToast('🔒 Запаркован!');
+      closeMoDirect();
+      load();
+    } else {
+      const msgs = {parker_not_configured:'❌ Паркер не настроен', already_parked:'Уже запаркован', park_failed:'❌ Не удалось — ник занят?'};
+      showToast(msgs[d.error] || '❌ Ошибка');
+      if(btn){ btn.disabled=false; btn.textContent='🔒 Запарковать вручную'; }
+    }
+  }catch(e){
+    showToast('❌ Нет соединения');
+    if(btn){ btn.disabled=false; btn.textContent='🔒 Запарковать вручную'; }
+  }
 }
 function onPrice(v){
   flt.maxPrice=parseInt(v);

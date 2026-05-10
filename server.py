@@ -194,6 +194,38 @@ def roulette_result_api():
 
 _OWNER_ID = 5968081460  # telegram user id of the shop owner
 
+@app.route("/api/admin/park", methods=["POST"])
+def admin_park():
+    d        = request.json or {}
+    user_id  = d.get("user_id")
+    username = d.get("username", "").lower()
+
+    env_str  = os.getenv("ADMIN_ID", "").strip()
+    admin_id = int(env_str) if env_str.isdigit() else _OWNER_ID
+    if user_id != admin_id:
+        return jsonify({"error": "forbidden"}), 403
+
+    item = __import__("database").get_username(username)
+    if not item:
+        return jsonify({"error": "not_found"}), 404
+    if item.get("is_parked"):
+        return jsonify({"error": "already_parked"}), 400
+
+    from parker import park_nick, is_configured as parker_ok
+    from database import set_parked
+    if not parker_ok():
+        return jsonify({"error": "parker_not_configured"}), 503
+
+    async def _do():
+        return await park_nick(username)
+
+    cid = asyncio.run(_do())
+    if cid:
+        set_parked(username, cid)
+        return jsonify({"ok": True, "channel_id": cid})
+    return jsonify({"error": "park_failed"}), 500
+
+
 @app.route("/api/check-admin")
 def check_admin():
     user_id  = request.args.get("user_id", type=int)

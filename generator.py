@@ -17,9 +17,9 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-CHECK_CONCURRENCY = 5   # сколько ников проверять параллельно
-CATALOG_TARGET = 200    # сколько ников держать в каталоге
-GENERATE_BATCH = 60     # сколько генерировать за раз
+CHECK_CONCURRENCY = 10  # сколько ников проверять параллельно
+CATALOG_TARGET = 1000   # сколько ников держать в каталоге
+GENERATE_BATCH = 120    # сколько генерировать за раз
 
 HEADERS_TG = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -352,31 +352,40 @@ async def check_batch(usernames: list[str]) -> dict[str, bool]:
 
 def calc_price(username: str, readability: int, uniqueness: int) -> int:
     """
-    Цена в Stars. Короче + без повторов = дороже.
-    Комиссия Telegram 30% уже включена.
+    Ценообразование: чистые короткие буквенные ники = премиум.
+    Ники с цифрами — бюджетный сегмент.
+    Комиссия Telegram 30% включена.
     """
     l = len(username)
+    has_digit  = any(c.isdigit() for c in username)
     has_repeat = len(set(username)) < len(username)
 
-    if l <= 3:   base = 9500
-    elif l <= 4: base = 8500
-    elif l <= 5: base = 6500
-    elif l <= 6: base = 3500
-    elif l <= 8: base = 1500
-    else:        base = 700
+    if has_digit:
+        # Цифры резко снижают ценность
+        if l <= 5:   base = 1200
+        elif l <= 7: base = 600
+        else:        base = 250
+        bonus = 0
+    else:
+        # Чистые буквенные ники
+        if l <= 3:   base = 9500
+        elif l <= 4: base = 8000
+        elif l <= 5: base = 6000
+        elif l <= 6: base = 3500
+        elif l <= 7: base = 2000
+        elif l <= 8: base = 1100
+        else:        base = 500
 
-    # Штраф за повторяющиеся буквы
-    if has_repeat:
-        base = int(base * 0.7)
+        # Штраф за повторяющиеся буквы
+        if has_repeat:
+            base = int(base * 0.72)
 
-    # Бонус за читаемость и уникальность
-    bonus = int((readability / 10) * 800 + (uniqueness / 10) * 500)
-    total = base + bonus
+        # Бонус за читаемость и уникальность (только для буквенных)
+        bonus = int((readability / 10) * 700 + (uniqueness / 10) * 450)
 
-    # Включаем комиссию Telegram 30%
-    total = int(total * 1.30)
+    total   = int((base + bonus) * 1.30)
     rounded = round(total / 50) * 50
-    return max(100, min(10000, int(rounded)))
+    return max(100, min(10000, rounded))
 
 
 # ── Главная функция автопополнения ───────────
