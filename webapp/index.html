@@ -334,6 +334,20 @@
 
 <!-- SCREENS -->
 <div id="scCatalog" class="sc-wrap on">
+  <div id="adminPanel" style="display:none;padding:10px 10px 0">
+    <div style="background:rgba(124,106,247,.08);border:1px solid rgba(124,106,247,.25);border-radius:14px;padding:12px 14px">
+      <div style="font-size:11px;color:var(--acc2);font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">👑 Панель администратора</div>
+      <div style="display:flex;gap:8px">
+        <div style="position:relative;flex:1">
+          <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--acc2);font-weight:600">@</span>
+          <input id="adminNickIn" placeholder="username" maxlength="32" style="width:100%;height:38px;background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:0 10px 0 26px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);outline:none"
+            oninput="this.value=this.value.replace(/[^a-zA-Z0-9]/g,'').toLowerCase()">
+        </div>
+        <input id="adminPriceIn" placeholder="цена ⭐" type="number" min="100" max="10000" style="width:90px;height:38px;background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:0 10px;font-size:13px;color:var(--text);outline:none">
+        <button onclick="adminAddNick()" style="height:38px;padding:0 14px;background:var(--acc);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">+ Добавить</button>
+      </div>
+    </div>
+  </div>
   <div class="grid" id="grid"><div class="spin"><div class="sp"></div></div></div>
 </div>
 
@@ -466,6 +480,7 @@ async function init(){
       IS_ADMIN = d.is_admin || false;
     }catch{}
   }
+  if(IS_ADMIN) document.getElementById('adminPanel').style.display='block';
   load();
 }
 
@@ -597,7 +612,11 @@ function openMo(it){
     </div>
     ${res?`<div class="res-warn" style="display:block">⏳ Зарезервирован — доступен через ~${getResTime(it)} мин</div>`:''}
     <div class="cn">✓ Комиссия Telegram 30% включена · После оплаты ник придёт спойлером</div>
-    ${IS_ADMIN && !it.is_parked ? `<button class="bwf" id="btnAdminPark" onclick="adminPark('${it.username}')">🔒 Запарковать вручную</button>` : ''}
+    ${IS_ADMIN ? `
+      <div style="display:flex;gap:8px;margin-bottom:6px">
+        ${!it.is_parked ? `<button class="bwf" style="flex:1" id="btnAdminPark" onclick="adminPark('${it.username}')">🔒 Запарковать</button>` : '<div style="flex:1"></div>'}
+        <button class="bwf" style="flex:1;color:var(--red);border-color:rgba(248,113,113,.3)" onclick="adminDeleteNick('${it.username}')">🗑️ Удалить</button>
+      </div>` : ''}
     ${res
       ? `<button class="bwf" onclick="watchAndClose()">🔔 Уведомить когда освободится</button>`
       : `<button class="bbf" onclick="doBuy()">🎁 Купить сюрприз за ${fmt(it.price)} ⭐</button>
@@ -746,6 +765,44 @@ function setParked(v,el){
   flt.parked=v;
   document.querySelectorAll('.chip[onclick*="setParked"]').forEach(c=>c.classList.remove('on'));
   el.classList.add('on'); render();
+}
+
+async function adminAddNick(){
+  const username = document.getElementById('adminNickIn').value.trim();
+  const price    = document.getElementById('adminPriceIn').value || null;
+  if(!username){ showToast('Введи username'); return; }
+  try{
+    const r = await fetch(`${API}/admin/add-nick`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({user_id: USER_ID, username, price: price ? parseInt(price) : null})
+    });
+    const d = await r.json();
+    if(d.ok){
+      showToast(`✅ @${username} добавлен за ${d.price}⭐`);
+      document.getElementById('adminNickIn').value = '';
+      document.getElementById('adminPriceIn').value = '';
+      load();
+    } else {
+      const msgs = {already_exists:'Уже в каталоге', invalid_username:'Неверный формат'};
+      showToast(msgs[d.error] || '❌ Ошибка');
+    }
+  }catch(e){ showToast('❌ Нет соединения'); }
+}
+
+async function adminDeleteNick(username){
+  if(!confirm(`Удалить @${username} из каталога?`)) return;
+  try{
+    const r = await fetch(`${API}/admin/delete-nick`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({user_id: USER_ID, username})
+    });
+    const d = await r.json();
+    if(d.ok){
+      showToast(`🗑️ @${username} удалён`);
+      closeMoDirect();
+      load();
+    } else { showToast('❌ Ошибка'); }
+  }catch(e){ showToast('❌ Нет соединения'); }
 }
 
 async function adminPark(username){
