@@ -272,23 +272,32 @@ def admin_sync_parked():
             return [], 0
         named   = []
         orphans = 0
-        async for dialog in client.get_dialogs():
-            chat = dialog.chat
-            if chat.type.name not in ("CHANNEL", "SUPERGROUP"):
-                continue
-            if chat.username:
-                named.append({"username": chat.username.lower(), "id": chat.id})
-            else:
-                # Orphan channel — delete it
+        try:
+            async for dialog in client.get_dialogs():
                 try:
-                    await client.delete_channel(chat.id)
-                    orphans += 1
-                    logger.info(f"Sync: deleted orphan channel {chat.id}")
-                except Exception as ex:
-                    logger.warning(f"Sync: failed to delete orphan {chat.id}: {ex}")
+                    chat = dialog.chat
+                    from pyrogram.enums import ChatType
+                    if chat.type not in (ChatType.CHANNEL, ChatType.SUPERGROUP):
+                        continue
+                    if chat.username:
+                        named.append({"username": chat.username.lower(), "id": chat.id})
+                    else:
+                        try:
+                            await client.delete_channel(chat.id)
+                            orphans += 1
+                        except Exception:
+                            pass
+                except Exception as inner:
+                    logger.warning(f"Sync dialog error: {inner}")
+        except Exception as outer:
+            logger.error(f"Sync get_dialogs error: {outer}")
         return named, orphans
 
-    channels, orphans_deleted = asyncio.run(_sync())
+    try:
+        channels, orphans_deleted = asyncio.run(_sync())
+    except Exception as e:
+        logger.error(f"Sync asyncio.run error: {e}")
+        return jsonify({"error": str(e)}), 500
     synced = 0
     added  = 0
     for ch in channels:

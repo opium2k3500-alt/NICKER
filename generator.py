@@ -160,10 +160,10 @@ def _generate_local(count: int) -> list[dict]:
         onsets = prof[0] or _ONSETS
         nuclei = prof[1] or _NUCLEI
 
-        # Pick a length tier
+        # Pick a length tier — digit nicks rare (only 8% total)
         tier = random.choices(
             ["3", "4", "5", "6", "7", "4d", "5d", "6d"],
-            weights=[3, 22, 20, 14, 8, 12, 10, 8]
+            weights=[5, 28, 26, 18, 12, 3, 4, 4]
         )[0]
         has_digit = tier.endswith("d")
         tlen = int(tier[0])
