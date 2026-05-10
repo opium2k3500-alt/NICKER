@@ -194,6 +194,59 @@ def roulette_result_api():
 
 _OWNER_ID = 5968081460  # telegram user id of the shop owner
 
+@app.route("/api/admin/delete-nick", methods=["POST"])
+def admin_delete_nick():
+    d        = request.json or {}
+    user_id  = d.get("user_id")
+    username = d.get("username", "").lower()
+
+    env_str  = os.getenv("ADMIN_ID", "").strip()
+    admin_id = int(env_str) if env_str.isdigit() else _OWNER_ID
+    if user_id != admin_id:
+        return jsonify({"error": "forbidden"}), 403
+
+    from database import get_channel_id, remove_username
+    from parker import unpark_nick, is_configured as parker_ok
+    if parker_ok():
+        cid = get_channel_id(username)
+        if cid:
+            async def _unpark():
+                await unpark_nick(cid)
+            try:
+                asyncio.run(_unpark())
+            except Exception:
+                pass
+    remove_username(username)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/admin/add-nick", methods=["POST"])
+def admin_add_nick():
+    d        = request.json or {}
+    user_id  = d.get("user_id")
+    username = d.get("username", "").lower().strip().lstrip("@")
+    price    = d.get("price")
+
+    env_str  = os.getenv("ADMIN_ID", "").strip()
+    admin_id = int(env_str) if env_str.isdigit() else _OWNER_ID
+    if user_id != admin_id:
+        return jsonify({"error": "forbidden"}), 403
+
+    import re
+    if not re.match(r'^[a-z][a-z0-9]{2,11}$', username):
+        return jsonify({"error": "invalid_username"}), 400
+
+    from generator import calc_price
+    from database import add_username
+    if not price:
+        price = calc_price(username, 9, 9)
+
+    added = add_username(username, int(price), "Премиум", 9, 9, "добавлен администратором")
+    if not added:
+        return jsonify({"error": "already_exists"}), 409
+    return jsonify({"ok": True, "price": price})
+
+
 @app.route("/api/admin/park", methods=["POST"])
 def admin_park():
     d        = request.json or {}

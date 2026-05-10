@@ -278,19 +278,27 @@ def increment_view(username: str):
 
 def set_parked(username: str, channel_id: int):
     c = db()
-    c.execute("UPDATE usernames SET is_parked=1, channel_id=? WHERE username=?",
-              (channel_id, username.lower()))
+    # 15% markup for parked nicks (protection premium), capped at 10000
+    c.execute("""
+        UPDATE usernames
+        SET is_parked=1, channel_id=?,
+            price = MIN(10000, CAST(price * 1.15 AS INTEGER) / 50 * 50)
+        WHERE username=?
+    """, (channel_id, username.lower()))
     c.commit(); c.close()
 
 
 def get_unparked_catalog():
-    """Returns nicks that are free and not yet parked (5+ chars only)."""
+    """Returns best unparked nicks first: no digits, shortest, most expensive."""
     c = db()
     cur = c.cursor()
     cur.execute("""
         SELECT username FROM usernames
         WHERE is_sold=0 AND is_parked=0 AND length>=5
-        ORDER BY length ASC, added_at ASC
+        ORDER BY
+            (CASE WHEN username GLOB '*[0-9]*' THEN 0 ELSE 1 END) DESC,
+            price DESC,
+            length ASC
         LIMIT 5
     """)
     rows = [r["username"] for r in cur.fetchall()]

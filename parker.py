@@ -72,24 +72,34 @@ async def park_nick(username: str) -> int | None:
     if not client:
         return None
 
+    chat = None
     try:
         from pyrogram.errors import FloodWait, UsernameOccupied, UsernameInvalid
+        bot_link = os.getenv("WEBAPP_URL", "").replace("/", " ").strip().split()[0] if os.getenv("WEBAPP_URL") else ""
+        desc = f"Этот ник продаётся в магазине НИКЕР. {bot_link}" if bot_link else "Этот ник продаётся в магазине НИКЕР."
+
         chat = await client.create_channel(
-            title=f"@{username} — НИКЕР",
-            description="Этот ник продаётся на НИКЕР. t.me/NICKERbot",
+            title=f"@{username}",
+            description=desc,
         )
-        await asyncio.sleep(2)
+        await asyncio.sleep(3)
         await client.set_chat_username(chat.id, username)
         logger.info(f"Parker: парковал @{username} → channel {chat.id}")
         return chat.id
 
     except Exception as e:
         err = str(e)
+        # Cleanup orphan channel if it was created but username assignment failed
+        if chat:
+            try:
+                await client.delete_channel(chat.id)
+                logger.info(f"Parker: удалил orphan канал для @{username}")
+            except Exception:
+                pass
         if "FLOOD_WAIT" in err or "FloodWait" in err:
-            # FloodWait — просто пропускаем этот ник сейчас
             logger.warning(f"Parker FloodWait на @{username}: {e}")
         elif "USERNAME_OCCUPIED" in err or "USERNAME_INVALID" in err:
-            logger.info(f"Parker: @{username} занят или невалиден")
+            logger.info(f"Parker: @{username} занят или невалиден — пропускаем")
         else:
             logger.warning(f"Parker: не смог припарковать @{username}: {e}")
         return None
