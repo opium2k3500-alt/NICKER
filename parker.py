@@ -72,16 +72,23 @@ async def park_nick(username: str) -> int | None:
     if not client:
         return None
 
+    bot_username = os.getenv("BOT_USERNAME", "findyuruser_bot").lstrip("@")
+    desc = f"Этот ник продаётся в магазине НИКЕР. @{bot_username}"
+
     chat = None
     try:
         from pyrogram.errors import FloodWait, UsernameOccupied, UsernameInvalid
-        bot_link = os.getenv("WEBAPP_URL", "").replace("/", " ").strip().split()[0] if os.getenv("WEBAPP_URL") else ""
-        desc = f"Этот ник продаётся в магазине НИКЕР. {bot_link}" if bot_link else "Этот ник продаётся в магазине НИКЕР."
 
-        chat = await client.create_channel(
-            title=f"@{username}",
-            description=desc,
-        )
+        # Check if we already own a channel with this username
+        try:
+            existing = await client.get_chat(username)
+            if existing and hasattr(existing, 'username') and existing.username and existing.username.lower() == username.lower():
+                logger.info(f"Parker: уже владеем каналом @{username} → {existing.id}")
+                return existing.id
+        except Exception:
+            pass
+
+        chat = await client.create_channel(title=f"@{username}", description=desc)
         await asyncio.sleep(3)
         await client.set_chat_username(chat.id, username)
         logger.info(f"Parker: парковал @{username} → channel {chat.id}")
@@ -89,7 +96,6 @@ async def park_nick(username: str) -> int | None:
 
     except Exception as e:
         err = str(e)
-        # Cleanup orphan channel if it was created but username assignment failed
         if chat:
             try:
                 await client.delete_channel(chat.id)

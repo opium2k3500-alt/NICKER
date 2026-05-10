@@ -269,15 +269,26 @@ def admin_sync_parked():
     async def _sync():
         client = await get_client()
         if not client:
-            return []
-        found = []
+            return [], 0
+        named   = []
+        orphans = 0
         async for dialog in client.get_dialogs():
             chat = dialog.chat
-            if chat.type.name in ("CHANNEL", "SUPERGROUP") and chat.username:
-                found.append({"username": chat.username.lower(), "id": chat.id})
-        return found
+            if chat.type.name not in ("CHANNEL", "SUPERGROUP"):
+                continue
+            if chat.username:
+                named.append({"username": chat.username.lower(), "id": chat.id})
+            else:
+                # Orphan channel — delete it
+                try:
+                    await client.delete_channel(chat.id)
+                    orphans += 1
+                    logger.info(f"Sync: deleted orphan channel {chat.id}")
+                except Exception as ex:
+                    logger.warning(f"Sync: failed to delete orphan {chat.id}: {ex}")
+        return named, orphans
 
-    channels = asyncio.run(_sync())
+    channels, orphans_deleted = asyncio.run(_sync())
     synced = 0
     added  = 0
     for ch in channels:
@@ -288,14 +299,14 @@ def admin_sync_parked():
                 set_parked(uname, ch["id"])
                 synced += 1
         else:
-            # Nick was removed from catalog — re-add it
             price = calc_price(uname, 9, 9)
             ok = add_username(uname, price, "Премиум", 9, 9, "восстановлен при синхронизации")
             if ok:
                 set_parked(uname, ch["id"])
                 added += 1
 
-    return jsonify({"ok": True, "synced": synced, "added_back": added, "total_channels": len(channels)})
+    return jsonify({"ok": True, "synced": synced, "added_back": added,
+                    "total_channels": len(channels), "orphans_deleted": orphans_deleted})
 
 
 @app.route("/api/admin/park", methods=["POST"])

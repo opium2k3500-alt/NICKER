@@ -779,7 +779,7 @@ async function adminSyncParked(){
     });
     const d = await r.json();
     if(d.ok){
-      showToast(`✅ Синхронизировано: ${d.synced} обновлено, ${d.added_back} восстановлено из ${d.total_channels} каналов`);
+      showToast(`✅ ${d.synced} обновлено, ${d.added_back} восстановлено, ${d.orphans_deleted} orphan удалено`);
       load();
     } else {
       showToast(d.error === 'parker_not_configured' ? '❌ Паркер не настроен' : '❌ Ошибка');
