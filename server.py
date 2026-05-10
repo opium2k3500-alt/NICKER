@@ -101,10 +101,11 @@ def invoice_link():
     if not item or item["is_sold"]:
         return jsonify({"error": "not_found"}), 404
 
-    # Live-verify the nick is still free before selling
-    if not _live_check(username):
-        remove_username(username)
-        return jsonify({"error": "taken", "msg": "Ник только что заняли — удалили из каталога"}), 409
+    # Live-verify only unparked nicks — parked nicks show as "taken" because we own the channel
+    if not item.get("is_parked"):
+        if not _live_check(username):
+            remove_username(username)
+            return jsonify({"error": "taken", "msg": "Ник только что заняли — удалили из каталога"}), 409
 
     update_verified_at(username)
 
